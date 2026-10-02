@@ -13,16 +13,16 @@ Portal interno del Estudio Contable Z&V. Al entrar pide el email y la contraseñ
 
 ## Publicar en GitHub Pages
 
-1. En GitHub, crear un repositorio nuevo llamado `estudiocontable`.
+1. En GitHub, crear un repositorio nuevo llamado `ESTUDIOCONTABLEZV`.
 2. Subir esta carpeta (ver los comandos en la conversación, o arrastrar los archivos en "Add file → Upload files").
 3. En el repositorio: **Settings → Pages → Source: Deploy from a branch → main / (root)**.
-4. El sitio queda en `https://<usuario>.github.io/estudiocontable/`.
+4. El sitio queda en `https://christianflamini-ops.github.io/ESTUDIOCONTABLEZV/`.
 
 ## Configuración pendiente después de publicar
 
-- **Firebase:** Console → Authentication → Settings → Authorized domains → agregar `<usuario>.github.io`.
-- **Google Cloud (borradores de Gmail):** APIs y servicios → Credenciales → ID de cliente OAuth → Orígenes de JavaScript autorizados → agregar `https://<usuario>.github.io`.
-- **Consulta de CUITs:** en el Worker de Cloudflare `consulta-cuits`, agregar `https://<usuario>.github.io` a la variable `ALLOWED_ORIGINS`.
+- **Firebase:** Console → Authentication → Settings → Authorized domains → agregar `christianflamini-ops.github.io`.
+- **Google Cloud (borradores de Gmail):** APIs y servicios → Credenciales → ID de cliente OAuth → Orígenes de JavaScript autorizados → agregar `https://christianflamini-ops.github.io`.
+- **Consulta de CUITs:** en el Worker de Cloudflare `consulta-cuits`, agregar `https://christianflamini-ops.github.io` a la variable `ALLOWED_ORIGINS`.
 
 ## Actualizar una herramienta
 
