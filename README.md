@@ -13,10 +13,10 @@ Portal interno del Estudio Contable Z&V. Al entrar pide el email y la contraseñ
 
 ## Publicar en GitHub Pages
 
-1. En GitHub, crear un repositorio nuevo llamado `herramientas-zv`.
+1. En GitHub, crear un repositorio nuevo llamado `estudiocontable`.
 2. Subir esta carpeta (ver los comandos en la conversación, o arrastrar los archivos en "Add file → Upload files").
 3. En el repositorio: **Settings → Pages → Source: Deploy from a branch → main / (root)**.
-4. El sitio queda en `https://<usuario>.github.io/herramientas-zv/`.
+4. El sitio queda en `https://<usuario>.github.io/estudiocontable/`.
 
 ## Configuración pendiente después de publicar
 
