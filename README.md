@@ -26,6 +26,21 @@ Portal interno del Estudio Contable Z&V. Al entrar pide el email y la contraseñ
 
 ## Actualizar una herramienta
 
-Copiar el `index.html` nuevo de la herramienta a su carpeta en este repositorio y subir el cambio. GitHub Pages lo publica en uno o dos minutos.
+**Este repositorio es la única versión oficial de las herramientas.** Los cambios se hacen directamente en el `index.html` de cada carpeta de acá y después se suben a GitHub. GitHub Pages los publica en uno o dos minutos.
+
+Las carpetas de cada herramienta en el Escritorio (GESTION DE COBRANZAS, VEP MONOTRIBUTO MENSUAL, etc.) conservan la versión anterior renombrada como `index (version vieja).html`. Cada una de esas carpetas tiene un aviso (`LEEME…txt` y `CLAUDE.md`) que apunta acá. No hay que copiarlos encima de los de este repositorio, porque no tienen los agregados del sitio:
+
+- El enlace a los estilos comunes: `<link rel="stylesheet" href="../comun.css">` después del primer `</style>`.
+- El control de duración de la sesión: `<script src="../sesion.js"></script>` al final, con el cierre por inactividad propio de la herramienta desactivado.
+- El ícono compartido `../favicon.png`.
+- El botón "Volver al portal", la fecha y hora, el correo de la sesión junto a "Cerrar sesión" y el recuadro "¿Cómo funciona?".
+
+## Duración de la sesión
+
+`sesion.js` cierra la sesión a las 2 horas de haber ingresado, se esté usando o no. El plazo es el mismo en todas las páginas: pasar de una herramienta a otra no lo reinicia. Para cambiar la duración, editar `DURACION_SESION_MS` en ese archivo.
+
+## Estilos comunes
+
+`comun.css` define los tamaños compartidos (títulos, logo, letra, botones, pie de página). Lo cargan el portal y todas las herramientas: un cambio ahí se aplica en todas las páginas.
 
 No subir nunca certificados ni claves (por ejemplo la carpeta `certificado` de Búsqueda de CUIT).

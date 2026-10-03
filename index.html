@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Herramientas Z&amp;V</title>
+<title>ESTUDIO CONTABLE Z&amp;V</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   /* Misma estética que las herramientas del estudio (VEP, Cobranzas): fondo gris claro, tarjetas blancas de 18px, botones píldora */
   :root {
@@ -105,7 +106,9 @@
   /* --- Portal --- */
   .app { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
   header.top { position: relative; display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
-  .user-bar { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .top-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+  .user-bar { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .clock-top { font-size: 12.5px; color: var(--text-muted); min-height: 30px; display: flex; align-items: center; font-variant-numeric: tabular-nums; }
   .brand-row { display: flex; align-items: center; gap: 16px; }
   .logo-badge {
     flex-shrink: 0; width: 112px; height: 112px; border-radius: 24px;
@@ -116,20 +119,17 @@
   .eyebrow { font-size: 12.5px; letter-spacing: 0.01em; color: var(--text-muted); font-weight: 600; }
   h1 { font-weight: 700; font-size: 32px; margin: 2px 0 0; text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; }
   .subtitle { color: var(--text-muted); max-width: 60ch; margin: 6px 0 0; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pending); }
+  .sync-status.ok .sync-dot { background: var(--ok); }
 
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; max-width: 460px; }
-  .stat { background: var(--surface); border-radius: 16px; padding: 10px 14px; box-shadow: var(--shadow); }
-  .stat .num { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 500; }
-  #stat-periodo { text-transform: capitalize; }
-  .stat .label { color: var(--text-muted); font-size: 11px; margin-top: 1px; }
-  .stat.pending .num { color: var(--pending); }
 
   .section-title { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 28px 4px 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
   .section-title strong { color: var(--text); font-size: 18px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
   .card {
     background: var(--surface); border-radius: 18px; box-shadow: var(--shadow);
-    padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
+    padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
   }
   .card-head { display: flex; align-items: center; gap: 12px; }
   .icon { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); }
@@ -153,15 +153,15 @@
   .btn:focus-visible { outline: 3px solid var(--accent-tint); outline-offset: 2px; }
   .btn.block { width: 100%; justify-content: center; padding: 9px 16px; font-size: 13.5px; }
 
-  .foot { margin-top: 32px; text-align: center; color: var(--text-muted); font-size: 12px; }
+  footer.note { margin-top: 34px; color: var(--text-muted); font-size: 12.5px; text-align: center; }
 
   @media (max-width: 640px) {
-    .user-bar { position: static; align-self: flex-end; order: -1; }
     .logo-badge { width: 84px; height: 84px; border-radius: 20px; }
     h1 { font-size: 26px; }
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .sync-progress-bar { animation: none; width: 100%; } }
 </style>
+<link rel="stylesheet" href="comun.css">
 </head>
 <body>
 
@@ -206,28 +206,24 @@
 <!-- Portal -->
 <div class="app" id="appRoot" hidden>
   <header class="top">
-    <div class="user-bar">
-      <span id="userEmail"></span>
-      <button class="btn" id="logoutBtn" type="button">Cerrar sesión</button>
+    <div class="top-row">
+      <div class="clock-top" id="clockTop"></div>
+      <div class="user-bar">
+        <span id="userEmail"></span>
+        <button class="btn primary" id="logoutBtn" type="button">Cerrar sesión</button>
+      </div>
     </div>
     <div class="brand-row">
       <div class="logo-badge"><svg role="img" aria-label="Z&amp;V Estudio Contable"><use href="#logo-zv"/></svg></div>
       <div>
-        <div class="eyebrow">Estudio Contable Z&amp;V</div>
-        <h1>HERRAMIENTAS DEL ESTUDIO</h1>
-        <p class="subtitle">Acceso directo a cobranzas, VEP de ARCA, consulta de CUIT e informes de clientes.</p>
-      </div>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="num">5</div><div class="label">Herramientas</div></div>
-      <div class="stat"><div class="num" id="stat-periodo">–</div><div class="label">Período en curso</div></div>
-      <div class="stat pending"><div class="num" id="stat-vep">–</div><div class="label">Envío de VEP</div></div>
+        <h1>ESTUDIO CONTABLE Z&amp;V</h1>
+        <div class="sync-status" id="syncStatus"><span class="sync-dot"></span><span id="syncStatusText">Conectando…</span></div>      </div>
     </div>
   </header>
 
   <main id="tools"></main>
 
-  <p class="foot">La sesión se comparte con todas las herramientas y se cierra tras 60 minutos sin actividad.</p>
+  <footer class="note">Estudio Contable Z&amp;V</footer>
 </div>
 
 <script>
@@ -241,21 +237,21 @@ const ICONS = {
 };
 
 const GROUPS = [
-  { title: "Pagos ARCA", note: "Volantes Electrónicos de Pago del mes", tools: [
-    { name: "VEP MONOTRIBUTO MENSUAL", tag: "Régimen simplificado", icon: "vep", href: "vep-monotributo/",
-      desc: "VEP mensuales de monotributo de cada cliente: componente impositivo, jubilación y obra social." },
-    { name: "VEP AUTONOMOS MENSUAL", tag: "Régimen general", icon: "autonomo", href: "vep-autonomos/",
-      desc: "VEP de aportes de autónomos según la categoría de cada contribuyente." }
+  { title: "PAGOS ARCA", tools: [
+    { name: "VEP MONOTRIBUTO MENSUAL", icon: "vep", href: "vep-monotributo/",
+      desc: "Para cargar el importe del VEP de monotributo de cada cliente y enviárselo por correo o WhatsApp antes del día 15." },
+    { name: "VEP AUTONOMOS MENSUAL", icon: "autonomo", href: "vep-autonomos/",
+      desc: "Para cargar el monto de aportes de autónomos de cada cliente según su vencimiento y enviárselo por correo." }
   ]},
-  { title: "Clientes", note: "Honorarios y datos fiscales", tools: [
-    { name: "GESTION DE COBRANZAS", tag: "Honorarios", icon: "cobranza", href: "gestion-de-cobranzas/",
-      desc: "Honorarios cobrados y pendientes de cada cliente y el estado de sus pagos." },
-    { name: "CONSULTA DE CUITS", tag: "Búsqueda de CUIT", icon: "cuit", href: "consulta-cuits/",
-      desc: "Datos fiscales de un contribuyente a partir de su CUIT, con exportación a Excel." }
+  { title: "CLIENTES", tools: [
+    { name: "GESTION DE COBRANZAS", icon: "cobranza", href: "gestion-de-cobranzas/",
+      desc: "Para cargar los honorarios del mes, enviar el aviso de cobro a cada cliente y descargar el reporte de honorarios." },
+    { name: "CONSULTA DE CUITS", icon: "cuit", href: "consulta-cuits/",
+      desc: "Para consultar los datos fiscales de varios CUIT a la vez y descargar el resultado en Excel." }
   ]},
-  { title: "Informes", note: "Reportes periódicos para clientes", tools: [
-    { name: "INFORME MENSUAL MONOTRIBUTO", tag: "Situación fiscal", icon: "informe", href: "informe-monotributo/",
-      desc: "Informe mensual de cada monotributista con su facturación y situación de categoría." }
+  { title: "INFORMES", tools: [
+    { name: "INFORME MENSUAL MONOTRIBUTO", icon: "informe", href: "informe-monotributo/",
+      desc: "Para armar el informe mensual de facturación y categoría de cada monotributista y enviarlo en PDF." }
   ]}
 ];
 
@@ -263,32 +259,30 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 
 document.getElementById("tools").innerHTML = GROUPS.map(g => `
   <section aria-label="${esc(g.title)}">
-    <div class="section-title"><strong>${esc(g.title)}</strong><span>${esc(g.note)}</span></div>
+    <div class="section-title"><strong>${esc(g.title)}</strong></div>
     <div class="grid">
       ${g.tools.map(t => `
         <article class="card">
           <div class="card-head">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t.icon]}</svg></div>
-            <div class="name">${esc(t.name)}<span>${esc(t.tag)}</span></div>
+            <div class="name">${esc(t.name)}</div>
           </div>
           <p class="desc">${esc(t.desc)}</p>
-          <div class="actions"><a class="btn primary" href="${esc(t.href)}" target="_blank" rel="noopener">Abrir</a></div>
+          <div class="actions"><a class="btn primary" href="${esc(t.href)}">Abrir</a></div>
         </article>`).join("")}
     </div>
   </section>`).join("");
 
-const now = new Date();
-document.getElementById("stat-periodo").textContent =
-  now.toLocaleDateString("es-AR", { month: "short", year: "numeric" }).replace(".", "");
-// Recordatorio de las herramientas VEP: envío a clientes el día 15 de cada mes.
-const dia = now.getDate();
-const vep = document.getElementById("stat-vep");
-if (dia <= 15) { vep.textContent = dia === 15 ? "Hoy" : `En ${15 - dia} días`; }
-else {
-  vep.textContent = new Date(now.getFullYear(), now.getMonth() + 1, 15)
-    .toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
-  vep.parentElement.className = "stat";
+// Fecha y hora arriba a la izquierda (igual que en las herramientas)
+function tickClock() {
+  const d = new Date();
+  const fecha = d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const hora = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  document.getElementById("clockTop").textContent = fecha.charAt(0).toUpperCase() + fecha.slice(1) + " · " + hora + " h";
 }
+tickClock();
+setInterval(tickClock, 1000);
+
 
 // --- Acceso (Firebase Authentication, mismo proyecto que las herramientas) ---
 const firebaseConfig = {
@@ -314,15 +308,7 @@ if (typeof firebase === "undefined") {
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
-  const INACTIVITY_LIMIT_MS = 60 * 60 * 1000;
-  let inactivityTimer = null;
-  let loggedOutByInactivity = false;
-  function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => { loggedOutByInactivity = true; auth.signOut(); }, INACTIVITY_LIMIT_MS);
-  }
-  ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach(evt =>
-    document.addEventListener(evt, () => { if (auth.currentUser) resetInactivityTimer(); }, { passive: true }));
+  // La duración de la sesión (2 horas fijas) la controla sesion.js.
 
   $("loginForm").addEventListener("submit", e => {
     e.preventDefault();
@@ -356,23 +342,35 @@ if (typeof firebase === "undefined") {
 
   $("logoutBtn").addEventListener("click", () => auth.signOut());
 
+  // Estado de conexión con la nube (misma indicación que las herramientas)
+  let connectedRef = null;
+  function watchConnection() {
+    if (connectedRef || typeof firebase.database !== "function") return;
+    connectedRef = firebase.database().ref(".info/connected");
+    connectedRef.on("value", snap => {
+      const ok = snap.val() === true;
+      $("syncStatus").className = "sync-status" + (ok ? " ok" : "");
+      $("syncStatusText").textContent = ok ? "Sincronizado en la nube" : "Conectando…";
+    });
+  }
+  function stopWatchingConnection() {
+    if (connectedRef) { connectedRef.off(); connectedRef = null; }
+  }
+
   auth.onAuthStateChanged(user => {
     if (user) {
       $("userEmail").textContent = user.email || "";
       $("loginPassword").value = "";
       show("app");
-      resetInactivityTimer();
+      watchConnection();
     } else {
-      clearTimeout(inactivityTimer);
+      stopWatchingConnection();
       show("login");
-      if (loggedOutByInactivity) {
-        $("loginError").textContent = "Se cerró la sesión por inactividad. Volvé a ingresar.";
-        loggedOutByInactivity = false;
-      }
       $("loginEmail").focus();
     }
   });
 }
 </script>
+<script src="sesion.js"></script>
 </body>
 </html>
