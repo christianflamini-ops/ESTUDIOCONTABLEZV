@@ -357,7 +357,21 @@ if (typeof firebase === "undefined") {
     if (connectedRef) { connectedRef.off(); connectedRef = null; }
   }
 
+  // Al abrir la página, Firebase puede avisar "sin sesión" un instante antes de recuperar
+  // la sesión guardada. Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
+  let firstAuthEvent = true;
+  let pendingLogin = null;
+
   auth.onAuthStateChanged(user => {
+    clearTimeout(pendingLogin);
+    const isFirst = firstAuthEvent;
+    firstAuthEvent = false;
+    if (!user && isFirst) {
+      pendingLogin = setTimeout(() => {
+        if (!auth.currentUser) { stopWatchingConnection(); show("login"); $("loginEmail").focus(); }
+      }, 1500);
+      return;
+    }
     if (user) {
       $("userEmail").textContent = user.email || "";
       $("loginPassword").value = "";
