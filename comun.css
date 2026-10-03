@@ -41,6 +41,19 @@ h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.
 .how-to b { color: var(--text); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .how-to summary::before { transition: none; } }
 
+/* Pantalla "Sincronizando con la nube…" al ingresar a una herramienta */
+.sync-overlay { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+.sync-overlay-card { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sync-progress-track { width: 200px; height: 5px; background: var(--surface-sunken); border-radius: 999px; overflow: hidden; position: relative; }
+.sync-progress-bar {
+  position: absolute; top: 0; left: 0; height: 100%; width: 40%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong, var(--accent)));
+  animation: sync-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes sync-slide { 0% { left: -40%; width: 30%; } 50% { width: 55%; } 100% { left: 100%; width: 30%; } }
+.sync-overlay-text { font-size: 13.5px; color: var(--text-muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .sync-progress-bar { animation: none; width: 100%; } }
+
 /* Botones */
 .btn { font-size: 12.5px; padding: 7px 16px; border-radius: 980px; }
 

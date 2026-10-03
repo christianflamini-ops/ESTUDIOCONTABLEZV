@@ -345,16 +345,35 @@ if (typeof firebase === "undefined") {
   // Estado de conexión con la nube (misma indicación que las herramientas)
   let connectedRef = null;
   function watchConnection() {
-    if (connectedRef || typeof firebase.database !== "function") return;
+    if (connectedRef || typeof firebase.database !== "function") { if (!connectedRef) revealApp(); return; }
     connectedRef = firebase.database().ref(".info/connected");
     connectedRef.on("value", snap => {
       const ok = snap.val() === true;
       $("syncStatus").className = "sync-status" + (ok ? " ok" : "");
       $("syncStatusText").textContent = ok ? "Sincronizado en la nube" : "Conectando…";
+      if (ok) revealApp();
     });
   }
   function stopWatchingConnection() {
     if (connectedRef) { connectedRef.off(); connectedRef = null; }
+  }
+
+  // Pantalla "Sincronizando con la nube…" al ingresar (igual que en las herramientas):
+  // se quita cuando se confirma la conexión con la nube, o a los 5 segundos como máximo.
+  let appRevealed = false;
+  let revealTimer = null;
+  function showSyncing() {
+    appRevealed = false;
+    $("checkingText").innerHTML = "Sincronizando con la nube…<br>Esperá un momento.";
+    show("checking");
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(revealApp, 5000);
+  }
+  function revealApp() {
+    if (appRevealed || !auth.currentUser) return;
+    appRevealed = true;
+    clearTimeout(revealTimer);
+    show("app");
   }
 
   // Al abrir la página, Firebase puede avisar "sin sesión" un instante antes de recuperar
@@ -375,9 +394,11 @@ if (typeof firebase === "undefined") {
     if (user) {
       $("userEmail").textContent = user.email || "";
       $("loginPassword").value = "";
-      show("app");
+      showSyncing();
       watchConnection();
     } else {
+      clearTimeout(revealTimer);
+      $("checkingText").textContent = "Verificando sesión…";
       stopWatchingConnection();
       show("login");
       $("loginEmail").focus();

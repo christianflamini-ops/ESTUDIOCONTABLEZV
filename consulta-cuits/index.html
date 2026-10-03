@@ -219,6 +219,13 @@
   </div>
 </div>
 
+<div id="syncOverlay" class="sync-overlay" style="display:none;">
+  <div class="sync-overlay-card">
+    <div class="sync-progress-track"><div class="sync-progress-bar"></div></div>
+    <div class="sync-overlay-text">Sincronizando con la nube…<br>Esperá un momento.</div>
+  </div>
+</div>
+
 <div class="app" id="appRoot" style="display:none;">
   <div class="cupo" id="cupo">Podés pegar todos los CUITs juntos: se consultan automáticamente de a 20.</div>
   <div id="banner" class="banner" style="display:none;"></div>
@@ -504,10 +511,32 @@ function conectarEquipo() {
   fbDb.ref(`${FB_NS}/cuits`).on("value", snap => {
     equipo = Object.values(snap.val() || {}).sort((a, b) => (b.consultadoEl || 0) - (a.consultadoEl || 0));
     renderEquipo();
+    mostrarAppSincronizada();
   }, err => {
     setSyncStatus("off", "Sin acceso a la base del equipo");
     $("equipoBody").innerHTML = `<tr><td colspan="7" class="empty">No se pudo leer la base del equipo: ${esc(err.message)}</td></tr>`;
+    mostrarAppSincronizada();
   });
+}
+
+// Pantalla "Sincronizando con la nube…" (igual que en las demás herramientas):
+// se muestra al ingresar y se quita cuando llega el historial del equipo, o a los 5 segundos.
+let appSincronizada = false;
+let esperaSincronizacion = null;
+function mostrarSincronizando() {
+  appSincronizada = false;
+  $("syncOverlay").style.display = "flex";
+  $("appRoot").style.display = "none";
+  clearTimeout(esperaSincronizacion);
+  esperaSincronizacion = setTimeout(mostrarAppSincronizada, 5000);
+}
+function mostrarAppSincronizada() {
+  if (appSincronizada || !auth.currentUser) return;
+  appSincronizada = true;
+  clearTimeout(esperaSincronizacion);
+  $("syncOverlay").style.display = "none";
+  $("appRoot").style.display = "";
+  input.focus();
 }
 
 function desconectarEquipo() {
@@ -691,20 +720,32 @@ $("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") doLogi
 $("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
 $("logoutBtnTop").addEventListener("click", () => auth.signOut());
 
+// Firebase puede avisar "sin sesión" un instante antes de recuperar la sesión guardada.
+// Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
+let primerAvisoSesion = true;
+let ingresoDemorado = null;
 auth.onAuthStateChanged(user => {
+  clearTimeout(ingresoDemorado);
+  const esPrimerAviso = primerAvisoSesion;
+  primerAvisoSesion = false;
+  if (!user && esPrimerAviso) {
+    ingresoDemorado = setTimeout(() => { if (!auth.currentUser) $("loginGate").style.display = "flex"; }, 1500);
+    return;
+  }
   if (user) {
     $("loginGate").style.display = "none";
-    $("appRoot").style.display = "";
+    mostrarSincronizando();
     resetInactivityTimer();
     actualizarContador();
     conectarEquipo();
-    input.focus();
     pedirAlServidor("/estado").then(d => { avisoVencimiento(d.certificadoVence); actualizarCupo(d); }).catch(e => {
       if (/403|habilitado/.test(e.message)) mostrarBanner(e.message, "error");
     });
   } else {
     clearTimeout(inactivityTimer);
+    clearTimeout(esperaSincronizacion);
     desconectarEquipo();
+    $("syncOverlay").style.display = "none";
     $("loginGate").style.display = "flex";
     $("appRoot").style.display = "none";
     if (loggedOutByInactivity) {
