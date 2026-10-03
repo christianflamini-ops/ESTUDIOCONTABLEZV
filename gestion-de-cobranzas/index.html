@@ -3152,7 +3152,20 @@ if (fbHasAuth) {
   document.getElementById("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
   document.getElementById("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
 
+  // Firebase puede avisar "sin sesión" un instante antes de recuperar la sesión guardada.
+  // Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
+  let primerAvisoSesion = true;
+  let ingresoDemorado = null;
   auth.onAuthStateChanged(user => {
+    clearTimeout(ingresoDemorado);
+    const esPrimerAviso = primerAvisoSesion;
+    primerAvisoSesion = false;
+    if (!user && esPrimerAviso) {
+      ingresoDemorado = setTimeout(() => {
+        if (!auth.currentUser) document.getElementById("loginGate").style.display = "flex";
+      }, 1500);
+      return;
+    }
     if (user) {
       startApp();
     } else {
