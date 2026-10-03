@@ -43,4 +43,6 @@ Las carpetas de cada herramienta en el Escritorio (GESTION DE COBRANZAS, VEP MON
 
 `comun.css` define los tamaños compartidos (títulos, logo, letra, botones, pie de página). Lo cargan el portal y todas las herramientas: un cambio ahí se aplica en todas las páginas.
 
+**Al modificar `comun.css` o `sesion.js`, cambiar el número de versión** de sus enlaces en las 6 páginas (por ejemplo `comun.css?v=20261003b` → `comun.css?v=20261010a`). GitHub Pages indica a los navegadores que guarden estos archivos 10 minutos; con un número nuevo los descargan de nuevo en el momento.
+
 No subir nunca certificados ni claves (por ejemplo la carpeta `certificado` de Búsqueda de CUIT).
