@@ -72,6 +72,17 @@ En las cuatro herramientas, "Importar Excel" suma al contenido actual: los clien
 
 `comun.css` define los tamaños compartidos (títulos, logo, letra, botones, pie de página). Lo cargan el portal y todas las herramientas: un cambio ahí se aplica en todas las páginas.
 
-**Al modificar `comun.css`, `sesion.js`, `resumen.js` o `plantilla.js`, cambiar el número de versión** de sus enlaces en las 6 páginas (por ejemplo `comun.css?v=20261003b` → `comun.css?v=20261010a`). GitHub Pages indica a los navegadores que guarden estos archivos 10 minutos; con un número nuevo los descargan de nuevo en el momento.
+## Publicar una versión nueva
+
+Antes de cada subida a GitHub, ejecutar en Git Bash, dentro de esta carpeta:
+
+```
+bash actualizar-version.sh
+```
+
+El script pone un número de versión nuevo (fecha y hora) en `version.json`, en el `<meta name="zv-version">` de las 6 páginas y en los `?v=` de los archivos comunes. Así:
+
+- los navegadores descargan enseguida los archivos comunes nuevos, aunque GitHub Pages les indique guardarlos 10 minutos;
+- `version.js` detecta que la página abierta es de una versión anterior y muestra abajo el aviso "Hay una versión nueva del sitio · Actualizar", para que nadie tenga que usar Ctrl+F5.
 
 No subir nunca certificados ni claves (por ejemplo la carpeta `certificado` de Búsqueda de CUIT).

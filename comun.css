@@ -62,6 +62,16 @@ h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.
    su pantalla de ingreso propia no se muestra; sesion.js lleva al portal cuando no hay sesión. */
 body:has(a.back-portal) #loginGate { display: none !important; }
 
+/* Aviso de versión nueva del sitio (version.js) */
+.aviso-version {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 1000;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+  width: max-content; max-width: calc(100% - 32px);
+  background: var(--surface); color: var(--text); border-radius: 16px; box-shadow: var(--shadow);
+  border: 1px solid var(--accent); padding: 10px 12px 10px 16px; font-size: 13px; font-weight: 600;
+}
+
 /* Botones */
 .btn { font-size: 12.5px; padding: 7px 16px; border-radius: 980px; }
 
