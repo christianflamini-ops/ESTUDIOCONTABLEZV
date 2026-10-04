@@ -46,6 +46,10 @@ Cada tarjeta del portal muestra el estado del mes de su herramienta:
 - **VEP Monotributo, VEP Autónomos, Gestión de Cobranzas e Informe Mensual:** al calcular sus contadores (los que muestran arriba), cada herramienta los guarda en la nube en `resumenPortal/<herramienta>/<AAAA-MM>` mediante `resumen.js`. El portal muestra esos mismos números. Se actualizan cada vez que alguien abre o usa la herramienta; si en el mes todavía nadie la abrió, la tarjeta lo indica.
 - **Consulta de CUITs:** el portal cuenta los CUIT consultados en el mes y le pide al servidor la fecha de vencimiento del certificado de ARCA. Si faltan 60 días o menos (o ya venció), muestra un aviso arriba de las herramientas.
 
+## Respaldo automático semanal
+
+El servidor de Consulta de CUITs (Worker de Cloudflare `consulta-cuits`, código en `Desktop\BUSQUEDA DE CUIT\servidor\worker.js`) lee una vez por semana toda la base de Firebase con una cuenta de servicio (secreto `FIREBASE_SA`), la comprime y guarda las últimas 8 copias en su almacenamiento KV. La sección RESPALDO del portal muestra la fecha del último respaldo, avisa si tiene más de 8 días o si el último intento falló, y permite descargarlo (archivo JSON con todos los datos) o hacer uno en el momento.
+
 ## Recordatorio del Excel de respaldo
 
 La base de datos de Firebase (plan gratuito) no tiene copias de seguridad automáticas: el Excel exportado de cada herramienta es el respaldo. Al usar "Exportar Excel", la herramienta guarda la fecha en `exportacionesExcel/<herramienta>` (`resumen.js`), y el portal la muestra en su tarjeta. Si pasaron más de 31 días (`DIAS_RESPALDO` en `index.html`) o nunca se exportó desde el sitio, la marca en naranja.

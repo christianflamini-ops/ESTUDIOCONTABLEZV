@@ -240,6 +240,22 @@
 
   <main id="tools"></main>
 
+  <section aria-label="Respaldo">
+    <div class="section-title"><strong>RESPALDO</strong></div>
+    <article class="card">
+      <div class="card-head">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <div class="name">RESPALDO AUTOMÁTICO</div>
+      </div>
+      <p class="desc">Una vez por semana se guarda una copia de todos los datos del portal y de las herramientas. Se conservan las últimas 8 copias.</p>
+      <div class="status" id="st-respaldo"><span class="status-note">Cargando estado del respaldo…</span></div>
+      <div class="actions">
+        <button class="btn primary" id="descargarRespaldo" type="button" disabled>Descargar último respaldo</button>
+        <button class="btn" id="respaldoAhora" type="button">Hacer respaldo ahora</button>
+      </div>
+    </article>
+  </section>
+
   <footer class="note">Estudio Contable Z&amp;V</footer>
 </div>
 
@@ -538,6 +554,74 @@ if (typeof firebase === "undefined") {
     }
   }
 
+  // --- Respaldo automático semanal (lo hace el servidor de Consulta de CUITs, ver su worker.js) ---
+  const DIAS_ALERTA_RESPALDO = 8; // si el último respaldo tiene más días, se marca en naranja
+  let respaldos = null;
+
+  async function pedirRespaldos(ruta, opciones = {}) {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(WORKER_URL + ruta, { ...opciones, headers: { "Authorization": "Bearer " + token } });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `Error del servidor (${r.status})`); }
+    return r;
+  }
+
+  function renderRespaldo() {
+    const el = $("st-respaldo");
+    const boton = $("descargarRespaldo");
+    if (!el) return;
+    if (!respaldos) { el.innerHTML = `<span class="status-note">Cargando estado del respaldo…</span>`; boton.disabled = true; return; }
+    if (respaldos.error) { el.innerHTML = `<div class="status-note">No se pudo consultar el estado del respaldo: ${esc(respaldos.error)}</div>`; boton.disabled = true; return; }
+    const lista = respaldos.respaldos || [];
+    const intento = respaldos.ultimoIntento;
+    let html = "";
+    if (lista.length) {
+      const u = lista[0];
+      const [a, m, d] = u.fecha.split("-");
+      const dias = Math.floor((Date.now() - Date.parse(u.fecha + "T12:00:00-03:00")) / 86400000);
+      const tono = dias > DIAS_ALERTA_RESPALDO ? "warn" : "ok";
+      html += `<div class="status-title">Último respaldo</div><div class="chips"><span class="chip ${tono}">${d}/${m}/${a}${dias > 0 ? ` · hace ${dias} ${plural(dias, "día", "días")}` : " · hoy"}</span><span class="chip">${lista.length} ${plural(lista.length, "copia guardada", "copias guardadas")}</span></div>`;
+    } else {
+      html += `<div class="status-title">Último respaldo</div><div class="chips"><span class="chip warn">Todavía no hay respaldos</span></div>`;
+    }
+    if (intento && !intento.ok) html += `<div class="chips"><span class="chip danger">El último intento falló</span></div><div class="status-note">${esc(intento.error || "")}</div>`;
+    if (!respaldos.configurado) html += `<div class="status-note">El respaldo automático todavía no está configurado en el servidor.</div>`;
+    el.innerHTML = html;
+    boton.disabled = !lista.length;
+  }
+
+  async function cargarRespaldos() {
+    try { respaldos = await (await pedirRespaldos("/respaldos")).json(); }
+    catch (e) { respaldos = { error: e.message }; }
+    renderRespaldo();
+  }
+
+  $("descargarRespaldo").addEventListener("click", async () => {
+    const lista = (respaldos && respaldos.respaldos) || [];
+    if (!lista.length) return;
+    const boton = $("descargarRespaldo");
+    boton.disabled = true; boton.textContent = "Descargando…";
+    try {
+      const r = await pedirRespaldos("/respaldos/descargar?fecha=" + encodeURIComponent(lista[0].fecha));
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement("a");
+      a.href = url; a.download = `respaldo-estudio-zv-${lista[0].fecha}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) {
+      alert("No se pudo descargar el respaldo: " + e.message);
+    } finally {
+      boton.disabled = false; boton.textContent = "Descargar último respaldo";
+    }
+  });
+
+  $("respaldoAhora").addEventListener("click", async () => {
+    const boton = $("respaldoAhora");
+    boton.disabled = true; boton.textContent = "Haciendo respaldo…";
+    try { respaldos = await (await pedirRespaldos("/respaldos/ahora", { method: "POST" })).json(); }
+    catch (e) { await cargarRespaldos(); alert(e.message); }
+    finally { boton.disabled = false; boton.textContent = "Hacer respaldo ahora"; renderRespaldo(); }
+  });
+
   async function consultarCertificado() {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -567,10 +651,11 @@ if (typeof firebase === "undefined") {
     exportRef.on("value", snap => { exportaciones = snap.val() || {}; renderEstados(); }, () => { exportaciones = null; renderEstados(); });
     statusRefs.push(resumenRef, cuitsRef, exportRef);
     consultarCertificado();
+    cargarRespaldos();
   }
   function stopStatus() {
     statusRefs.splice(0).forEach(ref => ref.off());
-    resumenes = {}; cuitsDelMes = null; certificado = null; exportaciones = null;
+    resumenes = {}; cuitsDelMes = null; certificado = null; exportaciones = null; respaldos = null;
   }
   // Refresca los textos "Actualizado hace…" cada minuto.
   setInterval(() => { if (statusRefs.length) renderEstados(); }, 60000);
