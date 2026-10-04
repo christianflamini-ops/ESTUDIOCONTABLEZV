@@ -24,6 +24,20 @@
     return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   }
 
+  // Ingreso: Enter en Email o Contraseña ingresa. Se escucha en fase de captura, antes que el
+  // administrador de contraseñas del navegador o una extensión, que a veces se quedan con el Enter
+  // del campo Contraseña. Se detiene acá para que el Enter propio de la herramienta no ingrese dos veces.
+  window.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    const id = e.target && e.target.id;
+    if (id !== "loginEmail" && id !== "loginPassword") return;
+    const ingresar = document.getElementById("loginSubmit");
+    if (!ingresar) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!ingresar.disabled) ingresar.click();
+  }, true);
+
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.defaultPrevented || e.isComposing) return;
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;

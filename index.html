@@ -176,7 +176,7 @@
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .sync-progress-bar { animation: none; width: 100%; } }
 </style>
-<link rel="stylesheet" href="comun.css?v=20261004c">
+<link rel="stylesheet" href="comun.css?v=20261004d">
 </head>
 <body>
 
@@ -378,12 +378,15 @@ if (typeof firebase === "undefined") {
 
   // Enter ingresa aunque el cursor no esté en un campo (por ejemplo, cuando el navegador
   // completó solo el email y la contraseña). Dentro de los campos ya lo resuelve el formulario.
-  document.addEventListener("keydown", e => {
-    if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || $("loginGate").hidden) return;
-    if (e.target.closest && e.target.closest("#loginForm")) return;
+  // Se escucha en fase de captura, antes que el administrador de contraseñas del navegador o
+  // una extensión, que a veces se quedan con el Enter del campo Contraseña.
+  window.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.isComposing || $("loginGate").hidden) return;
+    if (e.target && e.target.id === "togglePasswordBtn") return; // Enter en el ojito: mostrar/ocultar
     e.preventDefault();
-    $("loginForm").requestSubmit();
-  });
+    e.stopImmediatePropagation();
+    if (!$("loginSubmit").disabled) $("loginForm").requestSubmit();
+  }, true);
 
   // Estado de conexión con la nube (misma indicación que las herramientas)
   let connectedRef = null;
@@ -692,6 +695,6 @@ if (typeof firebase === "undefined") {
   });
 }
 </script>
-<script src="sesion.js?v=20261004c"></script>
+<script src="sesion.js?v=20261004d"></script>
 </body>
 </html>
