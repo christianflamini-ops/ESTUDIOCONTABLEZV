@@ -37,7 +37,7 @@ Las carpetas de cada herramienta en el Escritorio (GESTION DE COBRANZAS, VEP MON
 
 ## Duración de la sesión
 
-El ingreso es siempre el del portal: en las herramientas, si no hay sesión (se tocó "Cerrar sesión", venció el plazo o se abrió la herramienta sin haber ingresado), `sesion.js` lleva al ingreso del portal, y la pantalla de ingreso propia de cada herramienta queda oculta desde `comun.css`. Si la herramienta se abrió sin sesión o venció el plazo, después de ingresar se vuelve a ella.
+El ingreso es siempre el del portal: en las herramientas, si no hay sesión (se tocó "Cerrar sesión", venció el plazo o se abrió la herramienta sin haber ingresado), `sesion.js` lleva al ingreso del portal; las herramientas no tienen pantalla de ingreso propia. Si la herramienta se abrió sin sesión o venció el plazo, después de ingresar se vuelve a ella.
 
 `sesion.js` cierra la sesión a las 2 horas de haber ingresado, se esté usando o no. El plazo es el mismo en todas las páginas: pasar de una herramienta a otra no lo reinicia. Para cambiar la duración, editar `DURACION_SESION_MS` en ese archivo.
 
@@ -60,7 +60,7 @@ La base de datos de Firebase (plan gratuito) no tiene copias de seguridad autom�
 
 VEP Monotributo, VEP Autónomos, Gestión de Cobranzas e Informe Mensual tienen el botón **Descargar plantilla** en su recuadro "Datos del Excel". Descarga un Excel con la hoja de datos vacía (los mismos títulos que lee "Importar Excel") y una hoja INSTRUCCIONES que explica cada columna. El armado común está en `plantilla.js`; las columnas y explicaciones de cada herramienta están en su propio `index.html`. Si se cambian las columnas que lee el importador de una herramienta, hay que actualizar también su plantilla.
 
-La función "Cambios pendientes" (un resumen para pasarle a Claude y que actualizara el Excel) quedó oculta desde `comun.css`: para tener la planilla al día alcanza con "Exportar Excel" y reemplazar el archivo anterior. Su código sigue en cada herramienta, sin uso, porque otras partes lo llaman.
+La función "Cambios pendientes" (un resumen para pasarle a Claude y que actualizara el Excel) se quitó: para tener la planilla al día alcanza con "Exportar Excel" y reemplazar el archivo anterior. Los clientes agregados a mano o desde Excel se eliminan con el botón "Eliminar cliente" de su tarjeta, que pide confirmación.
 
 En las cuatro herramientas, "Importar Excel" suma al contenido actual: los clientes que ya están se actualizan, los nuevos se agregan y no se borra ninguno. Las celdas vacías del archivo no borran datos ya cargados. VEP Autónomos reconoce a los clientes por CUIT; Informe Mensual, por CUIT o por nombre; VEP Monotributo y Cobranzas, por nombre.
 

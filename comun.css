@@ -54,13 +54,6 @@ h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.
 .sync-overlay-text { font-size: 13.5px; color: var(--text-muted); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .sync-progress-bar { animation: none; width: 100%; } }
 
-/* "Cambios pendientes" (resumen para pasarle a Claude) ya no se usa: para tener la planilla
-   al día alcanza con "Exportar Excel" y reemplazar el archivo anterior. Se oculta en todas las herramientas. */
-#toggleChanges, #changesWrap, #toggleCambios, #cambiosWrap { display: none !important; }
-
-/* El ingreso es siempre el del portal: en las herramientas (las que tienen "Volver al portal")
-   su pantalla de ingreso propia no se muestra; sesion.js lleva al portal cuando no hay sesión. */
-body:has(a.back-portal) #loginGate { display: none !important; }
 
 /* Aviso de versión nueva del sitio (version.js) */
 .aviso-version {

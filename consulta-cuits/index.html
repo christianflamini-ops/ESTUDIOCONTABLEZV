@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>CONSULTA DE CUITS</title>
-<meta name="zv-version" content="20261004-1837">
+<meta name="zv-version" content="20261004-1852">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -88,19 +88,6 @@
 
   .eyebrow { font-size: 12.5px; letter-spacing: 0.01em; color: var(--text-muted); font-weight: 600; }
 
-  .login-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
-  .login-card { width: 100%; max-width: 360px; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 32px 28px; }
-  .login-card h2 { font-size: 20px; font-weight: 600; margin: 6px 0 6px; }
-  .login-card .field { margin-bottom: 14px; }
-  .password-wrap { position: relative; }
-  .password-wrap input { padding-right: 38px; }
-  .toggle-password-btn {
-    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    border: none; background: none; padding: 5px; color: var(--text-muted); cursor: pointer; border-radius: 6px;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .toggle-password-btn:hover { color: var(--accent); background: var(--accent-tint); }
-  .login-error { color: var(--danger); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
 
   h1 { font-weight: 700; font-size: 32px; margin: 2px 0 0; text-wrap: balance; letter-spacing: -0.02em; }
   .subtitle { color: var(--text-muted); max-width: 60ch; margin: 6px 0 0; }
@@ -194,31 +181,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-1837">
+<link rel="stylesheet" href="../comun.css?v=20261004-1852">
 </head>
 <body>
 
-<div id="loginGate" class="login-gate" style="display:none;">
-  <div class="login-card">
-    <div class="eyebrow">Estudio Contable Z&amp;V</div>
-    <h2>Acceso al equipo</h2>
-    <div class="field">
-      <label for="loginEmail">Email</label>
-      <input type="email" id="loginEmail" autocomplete="username" placeholder="nombre@ejemplo.com">
-    </div>
-    <div class="field">
-      <label for="loginPassword">Contraseña</label>
-      <div class="password-wrap">
-        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
-        <button type="button" class="toggle-password-btn" id="togglePasswordBtn" title="Mostrar contraseña" aria-label="Mostrar contraseña">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        </button>
-      </div>
-    </div>
-    <button class="btn primary" id="loginSubmit" style="width:100%; justify-content:center;">Ingresar</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
-</div>
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
   <div class="sync-overlay-card">
@@ -675,84 +641,23 @@ $("excelBtn").addEventListener("click", () => {
 });
 
 // --- Sesión (igual que las otras herramientas) ---
-// Cierre por inactividad desactivado: la sesión dura 2 horas fijas (ver ../sesion.js).
-const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000;
-let inactivityTimer = null;
-let loggedOutByInactivity = false;
-function resetInactivityTimer() {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(() => { loggedOutByInactivity = true; auth.signOut(); }, INACTIVITY_LIMIT_MS);
-}
-["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach(evt => {
-  document.addEventListener(evt, () => { if (auth.currentUser) resetInactivityTimer(); }, { passive: true });
-});
-
-const eyeIcon = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle>`;
-const eyeOffIcon = `<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><path d="M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a9.26 9.26 0 0 0 5.39-1.61"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
-$("togglePasswordBtn").addEventListener("click", () => {
-  const pass = $("loginPassword");
-  const showing = pass.type === "text";
-  pass.type = showing ? "password" : "text";
-  $("togglePasswordBtn").innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${showing ? eyeIcon : eyeOffIcon}</svg>`;
-  $("togglePasswordBtn").title = showing ? "Mostrar contraseña" : "Ocultar contraseña";
-  $("togglePasswordBtn").setAttribute("aria-label", $("togglePasswordBtn").title);
-});
-
-function doLogin() {
-  const email = $("loginEmail").value.trim();
-  const pass = $("loginPassword").value;
-  const errEl = $("loginError");
-  errEl.textContent = "";
-  if (!email || !pass) { errEl.textContent = "Completá email y contraseña."; return; }
-  const btn = $("loginSubmit");
-  btn.disabled = true;
-  btn.textContent = "Ingresando…";
-  auth.signInWithEmailAndPassword(email, pass).catch(err => {
-    errEl.textContent = (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found")
-      ? "Email o contraseña incorrectos."
-      : "No se pudo iniciar sesión: " + err.message;
-  }).finally(() => {
-    btn.disabled = false;
-    btn.textContent = "Ingresar";
-  });
-}
-$("loginSubmit").addEventListener("click", doLogin);
-$("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-$("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+// La duración de la sesión (2 horas fijas) y el ingreso los manejan ../sesion.js y el portal.
 $("logoutBtnTop").addEventListener("click", () => auth.signOut());
 
-// Firebase puede avisar "sin sesión" un instante antes de recuperar la sesión guardada.
-// Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
-let primerAvisoSesion = true;
-let ingresoDemorado = null;
+// El ingreso es el del portal: sin sesión, ../sesion.js lleva al portal.
 auth.onAuthStateChanged(user => {
-  clearTimeout(ingresoDemorado);
-  const esPrimerAviso = primerAvisoSesion;
-  primerAvisoSesion = false;
-  if (!user && esPrimerAviso) {
-    ingresoDemorado = setTimeout(() => { if (!auth.currentUser) $("loginGate").style.display = "flex"; }, 1500);
-    return;
-  }
   if (user) {
-    $("loginGate").style.display = "none";
     mostrarSincronizando();
-    resetInactivityTimer();
     actualizarContador();
     conectarEquipo();
     pedirAlServidor("/estado").then(d => { avisoVencimiento(d.certificadoVence); actualizarCupo(d); }).catch(e => {
       if (/403|habilitado/.test(e.message)) mostrarBanner(e.message, "error");
     });
   } else {
-    clearTimeout(inactivityTimer);
     clearTimeout(esperaSincronizacion);
     desconectarEquipo();
     $("syncOverlay").style.display = "none";
-    $("loginGate").style.display = "flex";
     $("appRoot").style.display = "none";
-    if (loggedOutByInactivity) {
-      $("loginError").textContent = "Se cerró la sesión por inactividad. Volvé a ingresar.";
-      loggedOutByInactivity = false;
-    }
   }
 });
 </script>
@@ -779,8 +684,8 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
   });
 }
 </script>
-<script src="../sesion.js?v=20261004-1837"></script>
-<script src="../version.js?v=20261004-1837"></script>
-<script src="../enter.js?v=20261004-1837"></script>
+<script src="../sesion.js?v=20261004-1852"></script>
+<script src="../version.js?v=20261004-1852"></script>
+<script src="../enter.js?v=20261004-1852"></script>
 </body>
 </html>

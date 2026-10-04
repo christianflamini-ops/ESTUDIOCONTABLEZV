@@ -24,30 +24,12 @@
     return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   }
 
-  // Ingreso: Enter en Email o Contraseña ingresa. Se escucha en fase de captura, antes que el
-  // administrador de contraseñas del navegador o una extensión, que a veces se quedan con el Enter
-  // del campo Contraseña. Se detiene acá para que el Enter propio de la herramienta no ingrese dos veces.
-  window.addEventListener("keydown", e => {
-    if (e.key !== "Enter" || e.isComposing) return;
-    const id = e.target && e.target.id;
-    if (id !== "loginEmail" && id !== "loginPassword") return;
-    const ingresar = document.getElementById("loginSubmit");
-    if (!ingresar) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    if (!ingresar.disabled) ingresar.click();
-  }, true);
-
+  // El ingreso (y su Enter) está solo en el portal; las herramientas no tienen pantalla de ingreso.
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.defaultPrevented || e.isComposing) return;
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
     const campo = e.target;
     if (campo === document.body || campo === document.documentElement) {
-      // Pantalla de ingreso visible sin el cursor en un campo (por ejemplo, el navegador
-      // completó solo el email y la contraseña): Enter ingresa.
-      const ingreso = document.getElementById("loginGate");
-      const ingresar = document.getElementById("loginSubmit");
-      if (ingreso && ingresar && visible(ingreso) && !ingresar.disabled) { e.preventDefault(); ingresar.click(); return; }
       // Informe Mensual: al entrar pide confirmar el período sin ningún campo con el cursor.
       const continuar = document.getElementById("periodoContinuar");
       if (continuar && visible(continuar) && !continuar.disabled) { e.preventDefault(); continuar.click(); }
@@ -57,7 +39,6 @@
     const esSelect = campo instanceof HTMLSelectElement;
     if (!esInput && !esSelect) return;      // textarea y texto editable: Enter = salto de línea
     if (campo.form) return;                 // los formularios ya envían con Enter
-    if (campo.closest("#loginGate")) return; // el ingreso ya tiene su propio Enter
 
     for (let cont = campo.parentElement; cont && !cont.matches(LIMITES); cont = cont.parentElement) {
       const boton = Array.from(cont.querySelectorAll(BOTONES)).find(visible);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>INFORME MENSUAL MONOTRIBUTO</title>
-<meta name="zv-version" content="20261004-1837">
+<meta name="zv-version" content="20261004-1852">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -652,18 +652,6 @@
   .export-panel { margin-top: 22px; margin-bottom: 0; }
   .recat-panel { border: 2px solid var(--accent); }
 
-  /* Cambios pendientes (igual que Gestión de Cobranzas) */
-  #changesCount {
-    display: inline-flex; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 999px;
-    background: var(--pending-tint); color: var(--pending); font-size: 11px; font-weight: 600;
-    align-items: center; justify-content: center;
-  }
-  #changesCount:empty { display: none; }
-  .empty-changes { color: var(--text-muted); font-size: 13.5px; }
-  .cambios-texto {
-    width: 100%; margin-top: 10px; font-family: inherit; font-size: 12px; padding: 10px; border-radius: 7px;
-    border: 1px solid var(--border); background: var(--surface-sunken); color: var(--text); resize: vertical;
-  }
   .change-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
   .change-row:last-of-type { border-bottom: none; }
   .change-row > span:first-child { text-transform: uppercase; font-weight: 500; }
@@ -768,31 +756,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-1837">
+<link rel="stylesheet" href="../comun.css?v=20261004-1852">
 </head>
 <body>
 
-<div id="loginGate" class="login-gate" hidden>
-  <div class="login-card">
-    <div class="eyebrow">Estudio Contable Z&amp;V</div>
-    <h2>Acceso al equipo</h2>
-    <div class="field">
-      <label for="loginEmail">Email</label>
-      <input type="email" id="loginEmail" autocomplete="username" placeholder="nombre@ejemplo.com">
-    </div>
-    <div class="field">
-      <label for="loginPassword">Contraseña</label>
-      <div class="password-wrap">
-        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
-        <button type="button" class="toggle-password-btn" id="togglePassword" tabindex="-1" aria-label="Mostrar contraseña">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        </button>
-      </div>
-    </div>
-    <button class="btn primary" id="loginSubmit" style="width:100%; justify-content:center;">Ingresar</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
-</div>
 
 <div id="syncOverlay" class="sync-overlay" hidden>
   <div class="sync-overlay-card">
@@ -857,7 +824,6 @@
       <button data-s="za">Z → A</button>
     </div>
     <button class="btn" data-act="nuevo" id="toggleAgregar">+ Agregar cliente</button>
-    <button class="btn" data-act="cambios" id="toggleCambios">Cambios pendientes <span id="changesCount"></span></button>
     <button class="btn" data-act="carga" id="toggleCarga">Carga mensual</button>
     <button class="btn azul" data-act="escalas" id="toggleEscalas">Escalas</button>
   </div>
@@ -867,7 +833,6 @@
 
   <div id="recatWrap"></div>
   <div id="agregarWrap"></div>
-  <div id="cambiosWrap"></div>
   <div id="cargaWrap"></div>
   <div id="escalasWrap"></div>
 
@@ -1995,9 +1960,6 @@ function renderHeader() {
   document.querySelectorAll('#sortFilters button').forEach(b => b.classList.toggle('active', b.dataset.s === ui.orden));
   $('#toggleEscalas').classList.toggle('active', ui.escalas);
   $('#toggleCarga').classList.toggle('active', ui.carga);
-  $('#toggleCambios').classList.toggle('active', !!ui.cambios);
-  $('#changesCount').textContent = clientesNuevos().length || '';
-  if (ui.cambios) renderCambios(); // el resumen refleja los datos recién guardados
 }
 
 // ---------- Barra de meses (igual a Gestión de Cobranzas) ----------
@@ -2070,7 +2032,6 @@ function render() {
   renderHeader();
   renderRecatAviso();
   renderAgregar();
-  renderCambios();
   renderCarga();
   renderEscalas();
   renderList();
@@ -2112,7 +2073,7 @@ function agregarCliente() {
     categoria: $('#nuevoCat').value,
     estado: $('#nuevoAccion').value,
     medio: $('#nuevoMedio').value.trim(),
-    nuevo: true, // queda en "Cambios pendientes" hasta que se cargue en el Excel
+    nuevo: true, // agregado en la página (todavía no figura en el Excel)
   });
   state.clients.push(c);
   persistir();
@@ -2121,65 +2082,6 @@ function agregarCliente() {
   render();
   document.querySelector(`[data-card="${c.id}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' });
   toast('Cliente agregado');
-}
-
-// ---------- Cambios pendientes para la planilla (igual que Gestión de Cobranzas) ----------
-// Clientes agregados en la página que todavía no figuran en el Excel.
-const clientesNuevos = () => state.clients.filter(c => c.nuevo);
-
-function textoCambios() {
-  const nuevos = clientesNuevos();
-  if (!nuevos.length) return '';
-  let out = 'CAMBIOS PARA CARGAR EN LA PLANILLA INFORME MENSUAL MONOTRIBUTO.xlsx\n\nCLIENTES NUEVOS:\n';
-  nuevos.forEach(c => {
-    const cargados = Object.entries(c.datos || {}).flatMap(([y, d]) => d.ingresos.map((v, m) => ({ y: +y, m, ing: v, gas: d.gastos[m] })))
-      .filter(x => x.ing != null || x.gas != null);
-    out += `- Cliente: ${c.nombre}\n`;
-    out += `  CUIT: ${fmtCuit(c.cuit) || '-'}\n`;
-    out += `  Acción / estado: ${c.estado || '-'}\n`;
-    out += `  Categoría: ${c.categoria || '-'}\n`;
-    out += `  Medio: ${c.medio || '-'}\n`;
-    if (cargados.length) {
-      out += '  Facturación y gastos cargados:\n';
-      cargados.forEach(x => { out += `    ${mesNumerico(x)}: facturación ${x.ing == null ? '-' : fmtMoney(x.ing)} · gastos ${x.gas == null ? '-' : fmtMoney(x.gas)}\n`; });
-    }
-    out += '\n';
-  });
-  return out.trim();
-}
-
-function renderCambios() {
-  const wrap = $('#cambiosWrap');
-  if (!ui.cambios) { wrap.innerHTML = ''; return; }
-  const nuevos = clientesNuevos();
-  const texto = textoCambios();
-  const filas = nuevos.map(c => `
-    <div class="change-row">
-      <div>🆕 <strong>${esc(c.nombre)}</strong> (${esc(c.medio || 'sin medio')})</div>
-      <button class="btn" data-act="cambio-ok" data-id="${c.id}">Ya cargado en el Excel</button>
-    </div>`).join('');
-  wrap.innerHTML = `
-    <div class="panel">
-      <h3>Cambios pendientes para la planilla</h3>
-      <p class="hint">Esta página no puede escribir directamente en tu archivo Excel. Copiá este resumen y pasáselo a Claude en el chat para que lo cargue en INFORME MENSUAL MONOTRIBUTO.xlsx.</p>
-      ${filas || '<p class="empty-changes">No hay cambios pendientes.</p>'}
-      ${texto ? `
-        <div class="actions" style="margin-top:14px;"><button class="btn primary" data-act="copiar-cambios">Copiar resumen</button></div>
-        <textarea readonly rows="6" class="cambios-texto">${esc(texto)}</textarea>` : ''}
-    </div>`;
-}
-
-async function copiarCambios() {
-  const texto = textoCambios();
-  try {
-    await navigator.clipboard.writeText(texto);
-  } catch (e) {
-    // Si el navegador no permite el portapapeles, se selecciona el texto y se copia a la antigua.
-    const ta = $('#cambiosWrap textarea');
-    ta.focus(); ta.select();
-    document.execCommand('copy');
-  }
-  toast('Resumen copiado');
 }
 
 // ---------- Panel de carga mensual ----------
@@ -3180,17 +3082,6 @@ document.addEventListener('click', e => {
       crearBorradores([c], t);
       break;
     }
-    case 'cambios': ui.cambios = !ui.cambios; renderHeader(); renderCambios(); break;
-    case 'copiar-cambios': copiarCambios(); break;
-    case 'cambio-ok': {
-      const c = clientePorId(t.dataset.id);
-      if (!c) break;
-      delete c.nuevo;
-      persistir();
-      renderHeader(); renderCambios();
-      toast('Marcado como cargado en el Excel');
-      break;
-    }
     case 'gmail-verificar': verificarEnviados(t); break;
     case 'descargar-todos': descargarTodos(t); break;
     case 'descargar-whatsapp': descargarTodos(t, true); break;
@@ -3444,22 +3335,7 @@ function dejarDeEscuchar() {
   fbDb.ref(FB_NS).off();
 }
 
-// Cierre de sesión por inactividad (1 hora), igual que Cobranzas.
-// Cierre por inactividad desactivado: la sesión dura 2 horas fijas (ver ../sesion.js).
-const LIMITE_INACTIVIDAD = 24 * 60 * 60 * 1000;
-let timerInactividad = null, cerradaPorInactividad = false, escuchandoActividad = false;
-function reiniciarInactividad() {
-  clearTimeout(timerInactividad);
-  timerInactividad = setTimeout(() => { cerradaPorInactividad = true; firebase.auth().signOut(); }, LIMITE_INACTIVIDAD);
-}
-function vigilarInactividad() {
-  if (!escuchandoActividad) {
-    escuchandoActividad = true;
-    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, () => { if (fbUsuario) reiniciarInactividad(); }, { passive: true }));
-  }
-  reiniciarInactividad();
-}
-
+// La duración de la sesión (2 horas fijas) y el ingreso los manejan ../sesion.js y el portal.
 function iniciarHerramienta() {
   if (!state.periodo) state.periodo = periodoSugerido();
   if (!fbHasAuth) {
@@ -3469,55 +3345,30 @@ function iniciarHerramienta() {
     return;
   }
   const auth = firebase.auth();
-  const ingresar = () => {
-    const email = $('#loginEmail').value.trim(), pass = $('#loginPassword').value;
-    const err = $('#loginError');
-    err.textContent = '';
-    if (!email || !pass) { err.textContent = 'Completá email y contraseña.'; return; }
-    const btn = $('#loginSubmit');
-    btn.disabled = true; btn.textContent = 'Ingresando…';
-    auth.signInWithEmailAndPassword(email, pass).catch(e => {
-      err.textContent = ['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(e.code)
-        ? 'Email o contraseña incorrectos.' : 'No se pudo iniciar sesión: ' + e.message;
-    }).finally(() => { btn.disabled = false; btn.textContent = 'Ingresar'; });
-  };
-  $('#loginSubmit').addEventListener('click', ingresar);
-  ['#loginEmail', '#loginPassword'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') ingresar(); }));
-  $('#togglePassword').addEventListener('click', () => {
-    const p = $('#loginPassword');
-    p.type = p.type === 'password' ? 'text' : 'password';
-  });
   $('#logoutBtnTop').addEventListener('click', () => {
     if (!confirmarDescartarEdicion()) return;
     auth.signOut();
   });
 
+  // El ingreso es el del portal: sin sesión, ../sesion.js lleva al portal.
   auth.onAuthStateChanged(user => {
     if (user) {
       fbUsuario = user;
-      $('#loginGate').hidden = true;
       $('#logoutBtnTop').hidden = false;
       $('#syncOverlay').hidden = false;
       setSyncStatus('', 'Conectando…');
       escucharNube();
-      vigilarInactividad();
       // Si la nube tarda, se muestran los datos guardados en este navegador mientras termina.
       setTimeout(() => { if (!reveladaApp) { revelarApp(); toast('Mostrando datos guardados mientras se termina de sincronizar.'); } }, 6000);
     } else {
       fbUsuario = null;
       dejarDeEscuchar();
-      clearTimeout(timerInactividad);
       nubeLista = false; reveladaApp = false;
       ui.informeEditado = null; ui.borradorMeses = null; ui.borradorDatos = null;
       $('#syncOverlay').hidden = true;
       $('#periodoGate').hidden = true;
       $('#appRoot').hidden = true;
       $('#logoutBtnTop').hidden = true;
-      $('#loginGate').hidden = false;
-      if (cerradaPorInactividad) {
-        $('#loginError').textContent = 'Se cerró la sesión por inactividad. Volvé a ingresar.';
-        cerradaPorInactividad = false;
-      }
     }
   });
 }
@@ -3548,10 +3399,10 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
   });
 }
 </script>
-<script src="../sesion.js?v=20261004-1837"></script>
-<script src="../version.js?v=20261004-1837"></script>
-<script src="../resumen.js?v=20261004-1837"></script>
-<script src="../plantilla.js?v=20261004-1837"></script>
-<script src="../enter.js?v=20261004-1837"></script>
+<script src="../sesion.js?v=20261004-1852"></script>
+<script src="../version.js?v=20261004-1852"></script>
+<script src="../resumen.js?v=20261004-1852"></script>
+<script src="../plantilla.js?v=20261004-1852"></script>
+<script src="../enter.js?v=20261004-1852"></script>
 </body>
 </html>

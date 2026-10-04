@@ -1,5 +1,5 @@
 ﻿<title>VEP MONOTRIBUTO MENSUAL</title>
-<meta name="zv-version" content="20261004-1837">
+<meta name="zv-version" content="20261004-1852">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -140,23 +140,7 @@
     margin-bottom: 20px;
   }
 
-  .login-gate {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: var(--bg);
-  }
 
-  .login-card {
-    width: 100%;
-    max-width: 360px;
-    background: var(--surface);
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    padding: 32px 28px;
-  }
 
   .sync-overlay {
     min-height: 100vh;
@@ -206,47 +190,11 @@
     text-align: center;
   }
 
-  .login-card h2 {
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
-    font-size: 20px;
-    font-weight: 600;
-    margin: 6px 0 6px;
-  }
 
-  .login-hint {
-    color: var(--text-muted);
-    font-size: 13px;
-    margin: 0 0 18px;
-  }
 
-  .login-card .field { margin-bottom: 14px; }
 
-  .password-wrap { position: relative; }
-  .password-wrap input { padding-right: 38px; }
 
-  .toggle-password-btn {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: none;
-    background: none;
-    padding: 5px;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .toggle-password-btn:hover { color: var(--accent); background: var(--accent-tint); }
 
-  .login-error {
-    color: var(--danger);
-    font-size: 12.5px;
-    margin-top: 10px;
-    min-height: 16px;
-  }
 
   h1 {
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
@@ -977,20 +925,6 @@
     margin-bottom: 16px;
   }
 
-  #changesCount {
-    display: inline-flex;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: var(--pending-tint);
-    color: var(--pending);
-    font-size: 11px;
-    font-weight: 600;
-    align-items: center;
-    justify-content: center;
-  }
-  #changesCount:empty { display: none; }
 
   .panel {
     background: var(--surface);
@@ -1042,22 +976,7 @@
 
   .form-grid textarea { resize: vertical; min-height: 70px; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif; font-size: 12.5px; }
 
-  .change-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13.5px;
-  }
-  .change-row:last-of-type { border-bottom: none; }
-  .change-row .btn { padding: 5px 10px; font-size: 12px; }
 
-  .empty-changes {
-    color: var(--text-muted);
-    font-size: 13.5px;
-  }
 
   .export-panel {
     margin-top: 22px;
@@ -1115,29 +1034,8 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-1837">
+<link rel="stylesheet" href="../comun.css?v=20261004-1852">
 
-<div id="loginGate" class="login-gate" style="display:none;">
-  <div class="login-card">
-    <div class="eyebrow">Estudio Contable Z&V</div>
-    <h2>Acceso al equipo</h2>
-    <div class="field">
-      <label for="loginEmail">Email</label>
-      <input type="email" id="loginEmail" autocomplete="username" placeholder="nombre@ejemplo.com">
-    </div>
-    <div class="field">
-      <label for="loginPassword">Contraseña</label>
-      <div class="password-wrap">
-        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
-        <button type="button" class="toggle-password-btn" id="togglePasswordBtn" title="Mostrar contraseña" aria-label="Mostrar contraseña">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        </button>
-      </div>
-    </div>
-    <button class="btn primary" id="loginSubmit" style="width:100%; justify-content:center;">Ingresar</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
-</div>
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
   <div class="sync-overlay-card">
@@ -1207,12 +1105,10 @@
     </div>
     <div class="toolbar-actions">
       <button class="btn" id="toggleAdd">+ Agregar cliente</button>
-      <button class="btn" id="toggleChanges">Cambios pendientes <span id="changesCount"></span></button>
     </div>
   </div>
 
   <div id="addFormWrap"></div>
-  <div id="changesWrap"></div>
 
   <div class="list" id="list"></div>
 
@@ -1301,7 +1197,6 @@ function safeRerender() {
   if (isEditingSomething()) { pendingRemoteRender = true; return; }
   render();
   renderMonthTabs();
-  updateChangesBtn();
 }
 document.addEventListener("focusout", () => {
   if (pendingRemoteRender) {
@@ -1401,7 +1296,6 @@ let unsavedVepClient = null;
 let sortOrder = "az";
 let searchTerm = "";
 let showAddForm = false;
-let showChanges = false;
 
 const today = new Date();
 let activeYear = today.getFullYear();
@@ -1423,49 +1317,7 @@ function effectiveFormato(c) {
   return ov !== undefined ? ov : (c.formatoVep || "");
 }
 
-function pendingChanges() {
-  const emailUpdates = [];
-  const formatoUpdates = [];
-  CLIENTES.forEach(c => {
-    const ov = emailOverrides[c.cliente];
-    if (ov && ov !== c.email) emailUpdates.push({cliente: c.cliente, email: ov});
-    const fv = formatoOverrides[c.cliente];
-    if (fv !== undefined && fv !== (c.formatoVep || "")) formatoUpdates.push({cliente: c.cliente, formatoVep: fv});
-  });
-  const renames = Object.values(nameOverrides).filter(r => r && !r.excelSynced);
-  return {emailUpdates, formatoUpdates, renames, nuevos: customClientes.filter(c => !c.fromExcel)};
-}
 
-function pendingChangesText() {
-  const {emailUpdates, formatoUpdates, renames, nuevos} = pendingChanges();
-  if (!emailUpdates.length && !formatoUpdates.length && !renames.length && !nuevos.length) return "";
-  let out = "CAMBIOS PARA CARGAR EN LA PLANILLA VEP MONOTRIBUTO MENSUAL.xlsx\n";
-  if (renames.length) {
-    out += "\nNOMBRES A ACTUALIZAR (columna CONTRIBUYENTE MENSUAL):\n";
-    renames.forEach(r => { out += `- ${r.cliente} → ${r.nuevo}\n`; });
-  }
-  if (emailUpdates.length) {
-    out += "\nEMAILS A ACTUALIZAR:\n";
-    emailUpdates.forEach(u => { out += `- ${u.cliente}: ${u.email}\n`; });
-  }
-  if (formatoUpdates.length) {
-    out += "\nFORMATO VEP A ACTUALIZAR:\n";
-    formatoUpdates.forEach(u => { out += `- ${u.cliente}: ${u.formatoVep || "Sin definir"}\n`; });
-  }
-  if (nuevos.length) {
-    out += "\nCLIENTES NUEVOS:\n";
-    nuevos.forEach(c => {
-      out += `- Contribuyente: ${c.cliente}\n`;
-      out += `  CUIT: ${c.cuit || "-"}\n`;
-      out += `  CUIT generador: ${c.cuitGenerador || "-"}\n`;
-      out += `  Formato VEP: ${c.formatoVep || "-"}\n`;
-      out += `  Medio: ${c.medio || "-"}\n`;
-      out += `  Email: ${c.email || "-"}\n`;
-      out += `  Observaciones: ${c.observaciones || "-"}\n\n`;
-    });
-  }
-  return out.trim();
-}
 
 function money(n) {
   const num = parseFloat(n);
@@ -1668,8 +1520,6 @@ function render() {
         }
         editingClientName = null;
         render();
-        updateChangesBtn();
-        renderChangesPanel();
         toast("Nombre actualizado");
       };
       renameInput.addEventListener("click", e => e.stopPropagation());
@@ -1708,8 +1558,6 @@ function render() {
         }
         editingFormatoClient = null;
         render();
-        updateChangesBtn();
-        renderChangesPanel();
         toast("Formato VEP actualizado");
       };
       formatoSelect.addEventListener("click", e => e.stopPropagation());
@@ -1766,6 +1614,7 @@ function render() {
         <div class="vto-hint">Vencimiento de pago (calculado): <strong>${vencimientoVep(activeYear, activeMonthNum)}</strong></div>
         <div class="actions honorarios-save-row">
           <button class="btn primary" data-save-honorarios disabled>Guardar cambios</button>
+          ${c.custom ? `<button class="btn" data-delete-custom>Eliminar cliente</button>` : ""}
         </div>
         <div class="history">
           <div class="h-title">Períodos adeudados (mes anterior)</div>
@@ -1790,6 +1639,14 @@ function render() {
       const montoInput = body.querySelector(`#monto-${cssId(c.cliente)}`);
       const deudaInput = body.querySelector(`#deuda-${cssId(c.cliente)}`);
       const saveHonorariosBtn = body.querySelector('[data-save-honorarios]');
+      // Clientes agregados a mano o desde Excel: se pueden eliminar (con confirmación).
+      const deleteCustomBtn = body.querySelector('[data-delete-custom]');
+      if (deleteCustomBtn) deleteCustomBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (!confirm(`¿Eliminar a ${displayName(c)}?\n\nSe borran también todos sus datos cargados en esta herramienta. No se puede deshacer.`)) return;
+        deleteCustomClient(c.cliente);
+        toast("Cliente eliminado");
+      });
       const markDirty = () => { saveHonorariosBtn.disabled = false; unsavedVepClient = c.cliente; };
       montoInput.addEventListener("input", markDirty);
       deudaInput.addEventListener("input", markDirty);
@@ -1820,7 +1677,6 @@ function render() {
           fbWrite(`emails/${fbKey(c.cliente)}`, {cliente: c.cliente, email: emailInput.value});
           const emailSpan = head.querySelector(".email");
           if (emailSpan) emailSpan.textContent = emailInput.value || "sin email cargado";
-          updateChangesBtn();
         });
       }
 
@@ -2152,7 +2008,6 @@ function renderAddForm() {
     }
     showAddForm = false;
     renderAddForm();
-    updateChangesBtn();
     render();
   });
 }
@@ -2178,80 +2033,17 @@ function deleteCustomClient(name) {
   delete descriptions[name];
   saveDescriptions(descriptions);
   fbRemove(`descriptions/${fbKey(name)}`);
-  updateChangesBtn();
-  renderChangesPanel();
   renderMonthTabs();
   render();
 }
 
-function renderChangesPanel() {
-  const wrap = document.getElementById("changesWrap");
-  if (!showChanges) { wrap.innerHTML = ""; return; }
-  const {emailUpdates, formatoUpdates, renames, nuevos} = pendingChanges();
-  const text = pendingChangesText();
-  let rows = "";
-  renames.forEach(r => {
-    rows += `<div class="change-row"><div>✏️ <strong>${escapeHtml(r.cliente)}</strong> — nuevo nombre: ${escapeHtml(r.nuevo)}</div><button class="btn" data-rename-done="${escapeAttr(r.cliente)}">Ya actualizado</button></div>`;
-  });
-  emailUpdates.forEach(u => {
-    rows += `<div class="change-row"><div>📧 <strong>${u.cliente}</strong> — nuevo email: ${escapeHtml(u.email)}</div></div>`;
-  });
-  formatoUpdates.forEach(u => {
-    rows += `<div class="change-row"><div>💳 <strong>${escapeHtml(u.cliente)}</strong> — nuevo formato VEP: ${escapeHtml(u.formatoVep || "Sin definir")}</div></div>`;
-  });
-  nuevos.forEach(c => {
-    rows += `<div class="change-row"><div>🆕 <strong>${c.cliente}</strong> (${c.medio || "sin medio"})</div><button class="btn" data-del="${escapeAttr(c.cliente)}">Quitar</button></div>`;
-  });
-  wrap.innerHTML = `
-    <div class="panel">
-      <h3>Cambios pendientes para la planilla</h3>
-      <p class="hint">Esta página no puede escribir directamente en tu archivo Excel. Copiá este resumen y pasáselo a Claude en el chat para que lo cargue en VEP MONOTRIBUTO MENSUAL.xlsx.</p>
-      ${rows ? rows : '<p class="empty-changes">No hay cambios pendientes.</p>'}
-      ${text ? `
-        <div class="actions" style="margin-top:14px;">
-          <button class="btn primary" id="copyChanges">Copiar resumen</button>
-        </div>
-        <textarea readonly rows="6" style="width:100%; margin-top:10px; font-family:inherit; font-size:12px; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--surface-sunken); color:var(--text);">${escapeHtml(text)}</textarea>
-      ` : ''}
-    </div>
-  `;
-  const copyBtn = document.getElementById("copyChanges");
-  if (copyBtn) copyBtn.addEventListener("click", () => copyText(text, "Resumen copiado", wrap.querySelector("textarea")));
-  wrap.querySelectorAll("[data-del]").forEach(b => {
-    b.addEventListener("click", () => deleteCustomClient(b.dataset.del));
-  });
-  wrap.querySelectorAll("[data-rename-done]").forEach(b => {
-    b.addEventListener("click", () => {
-      const original = b.dataset.renameDone;
-      if (!nameOverrides[original]) return;
-      nameOverrides[original] = Object.assign({}, nameOverrides[original], {excelSynced: true});
-      saveNameOverrides(nameOverrides);
-      fbWrite(`nameOverrides/${fbKey(original)}`, nameOverrides[original]);
-      renderChangesPanel();
-      updateChangesBtn();
-    });
-  });
-}
 
-function updateChangesBtn() {
-  const {emailUpdates, formatoUpdates, renames, nuevos} = pendingChanges();
-  const n = emailUpdates.length + formatoUpdates.length + renames.length + nuevos.length;
-  document.getElementById("changesCount").textContent = n ? n : "";
-}
 
 document.getElementById("toggleAdd").addEventListener("click", () => {
   showAddForm = !showAddForm;
-  showChanges = false;
   renderAddForm();
-  renderChangesPanel();
 });
 
-document.getElementById("toggleChanges").addEventListener("click", () => {
-  showChanges = !showChanges;
-  showAddForm = false;
-  renderChangesPanel();
-  renderAddForm();
-});
 
 // --- Borradores de Gmail ---
 let gisTokenClient = null;
@@ -2625,8 +2417,6 @@ async function importExcelFile(file) {
   saveNameOverrides(nameOverrides);
   renderMonthTabs();
   render();
-  updateChangesBtn();
-  renderChangesPanel();
   let msg = `Excel importado: ${updated} clientes actualizados`;
   if (created) msg += `, ${created} nuevos`;
   if (monthly) msg += `, ${monthly} registros mensuales`;
@@ -2860,49 +2650,18 @@ function attachFbListeners() {
   });
 }
 
-// Cierre por inactividad desactivado: la sesión dura 2 horas fijas (ver ../sesion.js).
-const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000;
-let inactivityTimer = null;
-let loggedOutByInactivity = false;
-
-function resetInactivityTimer() {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(() => {
-    loggedOutByInactivity = true;
-    firebase.auth().signOut();
-  }, INACTIVITY_LIMIT_MS);
-}
-
-let inactivityListenersWired = false;
-function startInactivityWatcher() {
-  if (!inactivityListenersWired) {
-    inactivityListenersWired = true;
-    ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach(evt => {
-      document.addEventListener(evt, resetInactivityTimer, {passive: true});
-    });
-  }
-  resetInactivityTimer();
-}
-
-function stopInactivityWatcher() {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = null;
-}
-
+// La duración de la sesión (2 horas fijas) y el ingreso los manejan ../sesion.js y el portal.
 let cloudSyncReady = false;
 function revealAppAfterSync() {
   if (cloudSyncReady) return;
   cloudSyncReady = true;
   document.getElementById("syncOverlay").style.display = "none";
   document.getElementById("appRoot").style.display = "";
-  updateChangesBtn();
   renderMonthTabs();
   render();
 }
 
 function startApp() {
-  document.getElementById("loginGate").style.display = "none";
-
   if (fbEnabled) {
     if (fbHasAuth && !cloudSyncReady) {
       document.getElementById("syncOverlay").style.display = "flex";
@@ -2925,87 +2684,28 @@ function startApp() {
         logoutBtn.addEventListener("click", () => firebase.auth().signOut());
       }
     }
-    if (fbHasAuth) {
-      startInactivityWatcher();
-    }
   } else {
     document.getElementById("appRoot").style.display = "";
     setSyncStatus("off", "Solo en este navegador (sin conexión a la nube)");
   }
 
   if (!fbEnabled || !fbHasAuth || cloudSyncReady) {
-    updateChangesBtn();
     renderMonthTabs();
     render();
   }
 }
 
-const eyeIcon = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle>`;
-const eyeOffIcon = `<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><path d="M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a9.26 9.26 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line>`;
-const togglePasswordBtn = document.getElementById("togglePasswordBtn");
-togglePasswordBtn.addEventListener("click", () => {
-  const passInput = document.getElementById("loginPassword");
-  const showing = passInput.type === "text";
-  passInput.type = showing ? "password" : "text";
-  togglePasswordBtn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${showing ? eyeIcon : eyeOffIcon}</svg>`;
-  togglePasswordBtn.title = showing ? "Mostrar contraseña" : "Ocultar contraseña";
-  togglePasswordBtn.setAttribute("aria-label", togglePasswordBtn.title);
-});
-
 let fbHasAuth = fbEnabled && typeof firebase.auth === "function";
 
 if (fbHasAuth) {
-  const auth = firebase.auth();
-
-  function doLogin() {
-    const email = document.getElementById("loginEmail").value.trim();
-    const pass = document.getElementById("loginPassword").value;
-    const errEl = document.getElementById("loginError");
-    errEl.textContent = "";
-    if (!email || !pass) { errEl.textContent = "Completá email y contraseña."; return; }
-    const btn = document.getElementById("loginSubmit");
-    btn.disabled = true;
-    btn.textContent = "Ingresando…";
-    auth.signInWithEmailAndPassword(email, pass).catch(err => {
-      errEl.textContent = (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found")
-        ? "Email o contraseña incorrectos."
-        : "No se pudo iniciar sesión: " + err.message;
-    }).finally(() => {
-      btn.disabled = false;
-      btn.textContent = "Ingresar";
-    });
-  }
-
-  document.getElementById("loginSubmit").addEventListener("click", doLogin);
-  document.getElementById("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-  document.getElementById("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-
-  // Firebase puede avisar "sin sesión" un instante antes de recuperar la sesión guardada.
-  // Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
-  let primerAvisoSesion = true;
-  let ingresoDemorado = null;
-  auth.onAuthStateChanged(user => {
-    clearTimeout(ingresoDemorado);
-    const esPrimerAviso = primerAvisoSesion;
-    primerAvisoSesion = false;
-    if (!user && esPrimerAviso) {
-      ingresoDemorado = setTimeout(() => {
-        if (!auth.currentUser) document.getElementById("loginGate").style.display = "flex";
-      }, 1500);
-      return;
-    }
+  // El ingreso es el del portal: sin sesión, ../sesion.js lleva al portal.
+  firebase.auth().onAuthStateChanged(user => {
     if (user) {
       startApp();
     } else {
-      stopInactivityWatcher();
       cloudSyncReady = false;
       document.getElementById("syncOverlay").style.display = "none";
-      document.getElementById("loginGate").style.display = "flex";
       document.getElementById("appRoot").style.display = "none";
-      if (loggedOutByInactivity) {
-        document.getElementById("loginError").textContent = "Se cerró la sesión por inactividad. Volvé a ingresar.";
-        loggedOutByInactivity = false;
-      }
     }
   });
 } else {
@@ -3037,8 +2737,8 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
 }
 </script>
 
-<script src="../sesion.js?v=20261004-1837"></script>
-<script src="../version.js?v=20261004-1837"></script>
-<script src="../resumen.js?v=20261004-1837"></script>
-<script src="../plantilla.js?v=20261004-1837"></script>
-<script src="../enter.js?v=20261004-1837"></script>
+<script src="../sesion.js?v=20261004-1852"></script>
+<script src="../version.js?v=20261004-1852"></script>
+<script src="../resumen.js?v=20261004-1852"></script>
+<script src="../plantilla.js?v=20261004-1852"></script>
+<script src="../enter.js?v=20261004-1852"></script>
