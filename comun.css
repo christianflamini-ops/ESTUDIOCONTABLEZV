@@ -1,0 +1,71 @@
+/* Estilos comunes del portal y las herramientas del Estudio Contable Z&V.
+   Se cargan después de los estilos propios de cada página, así que estos valores
+   son los que mandan: cambiar un tamaño acá lo cambia en todas las páginas. */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Ancho y márgenes de la página */
+.app { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+
+/* Encabezado */
+header.top { gap: 18px; margin-bottom: 28px; }
+.brand-row { gap: 16px; }
+.logo-badge { width: 112px; height: 112px; border-radius: 24px; padding: 12px; }
+.eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; }
+h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.sync-status { font-size: 12px; }
+.clock-top, .user-email-top, .user-bar { font-size: 12.5px; }
+
+/* Avisos, tarjetas y títulos de sección */
+.reminder-banner { font-size: 13px; }
+.panel, .card { border-radius: 18px; }
+.panel h3, .section-title strong { font-size: 18px; font-weight: 600; }
+
+/* Recuadro "¿Cómo funciona?" de cada herramienta */
+.how-to { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 18px; margin: 0 0 20px; }
+.how-to summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text); }
+.how-to summary::-webkit-details-marker { display: none; }
+.how-to summary::before {
+  content: ""; width: 6px; height: 6px; flex: none; margin-left: 2px;
+  border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg); transition: transform 0.15s ease;
+}
+.how-to[open] summary::before { transform: rotate(45deg); }
+.how-to summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+.how-to ol { margin: 12px 0 2px; padding-left: 22px; color: var(--text-muted); font-size: 13.5px; line-height: 1.55; max-width: 75ch; }
+.how-to li + li { margin-top: 6px; }
+.how-to b { color: var(--text); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .how-to summary::before { transition: none; } }
+
+/* Pantalla "Sincronizando con la nube…" al ingresar a una herramienta */
+.sync-overlay { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+.sync-overlay-card { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sync-progress-track { width: 200px; height: 5px; background: var(--surface-sunken); border-radius: 999px; overflow: hidden; position: relative; }
+.sync-progress-bar {
+  position: absolute; top: 0; left: 0; height: 100%; width: 40%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong, var(--accent)));
+  animation: sync-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes sync-slide { 0% { left: -40%; width: 30%; } 50% { width: 55%; } 100% { left: 100%; width: 30%; } }
+.sync-overlay-text { font-size: 13.5px; color: var(--text-muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .sync-progress-bar { animation: none; width: 100%; } }
+
+/* "Cambios pendientes" (resumen para pasarle a Claude) ya no se usa: para tener la planilla
+   al día alcanza con "Exportar Excel" y reemplazar el archivo anterior. Se oculta en todas las herramientas. */
+#toggleChanges, #changesWrap, #toggleCambios, #cambiosWrap { display: none !important; }
+
+/* Botones */
+.btn { font-size: 12.5px; padding: 7px 16px; border-radius: 980px; }
+
+/* Pie de página */
+footer.note { margin-top: 34px; font-size: 12.5px; }
+
+/* Pantallas angostas (celular) */
+@media (max-width: 640px) {
+  .logo-badge { width: 84px; height: 84px; border-radius: 16px; padding: 8px; }
+  h1 { font-size: 24px; }
+}

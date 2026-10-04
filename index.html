@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ESTUDIO CONTABLE Z&amp;V</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  /* Misma estética que las herramientas del estudio (VEP, Cobranzas): fondo gris claro, tarjetas blancas de 18px, botones píldora */
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface-sunken: #f0f0f2;
+    --text: #1d1d1f;
+    --text-muted: #6e6e73;
+    --border: #d2d2d7;
+    --accent: #0071e3;
+    --accent-strong: #0051a2;
+    --accent-tint: #e8f2fe;
+    --ok: #1e8e3e;
+    --ok-tint: #e6f6ea;
+    --pending: #bf6a02;
+    --pending-tint: #fdf1e0;
+    --danger: #d70015;
+    --danger-tint: #fce8e8;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000; --surface: #1d1d1f; --surface-sunken: #2c2c2e;
+      --text: #f5f5f7; --text-muted: #86868b; --border: #38383a;
+      --accent: #2997ff; --accent-strong: #6cb6ff; --accent-tint: #0f2c4d;
+      --ok: #30d158; --ok-tint: #0d2818; --pending: #ff9f0a; --pending-tint: #2e2110;
+      --danger: #ff453a; --danger-tint: #3a1210;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --surface: #1d1d1f; --surface-sunken: #2c2c2e;
+    --text: #f5f5f7; --text-muted: #86868b; --border: #38383a;
+    --accent: #2997ff; --accent-strong: #6cb6ff; --accent-tint: #0f2c4d;
+    --ok: #30d158; --ok-tint: #0d2818; --pending: #ff9f0a; --pending-tint: #2e2110;
+    --danger: #ff453a; --danger-tint: #3a1210;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* --- Ingreso --- */
+  .gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+  .login-card {
+    width: 100%; max-width: 360px; background: var(--surface);
+    border-radius: 20px; box-shadow: var(--shadow); padding: 32px 28px;
+  }
+  .login-logo { width: 64px; height: 64px; border-radius: 16px; background: #ffffff; box-shadow: var(--shadow); padding: 8px; margin-bottom: 16px; display: flex; align-items: center; }
+  .login-logo svg { width: 100%; height: auto; }
+  .login-card h2 { font-size: 20px; font-weight: 600; margin: 6px 0 18px; }
+  .login-hint { color: var(--text-muted); font-size: 13px; margin: 0 0 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+  .field input {
+    width: 100%; font: inherit; font-size: 14px; color: var(--text);
+    background: var(--surface-sunken); border: 1px solid transparent; border-radius: 10px; padding: 9px 12px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .password-wrap { position: relative; }
+  .password-wrap input { padding-right: 38px; }
+  .toggle-password-btn {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    border: none; background: none; padding: 5px; color: var(--text-muted); cursor: pointer;
+    border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .toggle-password-btn:hover { color: var(--accent); background: var(--accent-tint); }
+  .login-error { color: var(--danger); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+  .sync-card { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .sync-progress-track { width: 200px; height: 5px; background: var(--surface-sunken); border-radius: 999px; overflow: hidden; position: relative; }
+  .sync-progress-bar {
+    position: absolute; top: 0; left: 0; height: 100%; width: 40%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    animation: sync-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes sync-slide { 0% { left: -40%; width: 30%; } 50% { width: 55%; } 100% { left: 100%; width: 30%; } }
+  .sync-text { font-size: 13.5px; color: var(--text-muted); text-align: center; }
+
+  /* --- Portal --- */
+  .app { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.top { position: relative; display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+  .user-bar { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .clock-top { font-size: 12.5px; color: var(--text-muted); min-height: 30px; display: flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .brand-row { display: flex; align-items: center; gap: 16px; }
+  .logo-badge {
+    flex-shrink: 0; width: 112px; height: 112px; border-radius: 24px;
+    background: #ffffff; box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center; padding: 12px;
+  }
+  .logo-badge svg { width: 100%; height: auto; }
+  .eyebrow { font-size: 12.5px; letter-spacing: 0.01em; color: var(--text-muted); font-weight: 600; }
+  h1 { font-weight: 700; font-size: 32px; margin: 2px 0 0; text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; }
+  .subtitle { color: var(--text-muted); max-width: 60ch; margin: 6px 0 0; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pending); }
+  .sync-status.ok .sync-dot { background: var(--ok); }
+
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 28px 4px 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .section-title strong { color: var(--text); font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--surface); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  }
+  .card-head { display: flex; align-items: center; gap: 12px; }
+  .icon { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); }
+  .icon svg { width: 20px; height: 20px; }
+  .name { font-weight: 600; flex: 1; min-width: 0; }
+  .name span { display: block; font-weight: 400; font-size: 12.5px; color: var(--text-muted); }
+  .desc { margin: 0; color: var(--text-muted); font-size: 13.5px; flex: 1; }
+
+  /* Estado del mes en cada tarjeta */
+  .status { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--surface-sunken); min-height: 44px; }
+  .status-title { font-size: 11.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.01em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 980px; background: var(--surface-sunken); color: var(--text); font-variant-numeric: tabular-nums; }
+  .chip.ok { background: var(--ok-tint); color: var(--ok); }
+  .chip.warn { background: var(--pending-tint); color: var(--pending); }
+  .chip.danger { background: var(--danger-tint); color: var(--danger); }
+  .status-note { font-size: 11.5px; color: var(--text-muted); }
+  .export-line { display: flex; }
+
+  /* Aviso general arriba de las herramientas (vencimiento del certificado de ARCA) */
+  .portal-alert { border-radius: 12px; padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center; margin: -8px 0 8px; background: var(--pending-tint); color: var(--pending); }
+  .portal-alert.danger { background: var(--danger-tint); color: var(--danger); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .btn {
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    padding: 7px 16px; border-radius: 980px; border: none;
+    background: var(--surface-sunken); color: var(--text);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none; transition: background-color 0.15s ease, opacity 0.15s ease;
+  }
+  .btn:hover { background: var(--border); }
+  .btn.primary { background: var(--accent); color: white; }
+  .btn.primary:hover { background: var(--accent-strong); }
+  .btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+  .btn:focus-visible { outline: 3px solid var(--accent-tint); outline-offset: 2px; }
+  .btn.block { width: 100%; justify-content: center; padding: 9px 16px; font-size: 13.5px; }
+
+  footer.note { margin-top: 34px; color: var(--text-muted); font-size: 12.5px; text-align: center; }
+
+  @media (max-width: 640px) {
+    .logo-badge { width: 84px; height: 84px; border-radius: 20px; }
+    h1 { font-size: 26px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .sync-progress-bar { animation: none; width: 100%; } }
+</style>
+<link rel="stylesheet" href="comun.css?v=20261004b">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo-zv" viewBox="30 40 870 620">
+    <path fill="#182F48" fill-rule="evenodd" d="M 874 63 L 744 63 L 739 67 L 714 115 L 686 164 L 684 170 L 681 173 L 664 207 L 661 210 L 619 292 L 616 295 L 614 301 L 610 306 L 594 338 L 576 369 L 574 375 L 570 380 L 561 397 L 558 407 L 555 410 L 552 410 L 549 407 L 548 401 L 470 266 L 469 262 L 465 258 L 463 258 L 439 294 L 441 302 L 455 324 L 481 371 L 484 374 L 486 380 L 489 383 L 491 389 L 494 392 L 511 424 L 519 435 L 551 490 L 554 493 L 558 493 L 567 480 L 595 426 L 613 395 L 615 389 L 618 386 L 634 353 L 638 348 L 640 342 L 653 320 L 685 258 L 693 246 L 700 230 L 703 227 L 710 211 L 764 112 L 770 107 L 804 106 L 806 108 L 805 113 L 801 117 L 784 149 L 780 154 L 750 212 L 746 217 L 714 281 L 666 367 L 644 412 L 641 415 L 629 440 L 586 517 L 584 523 L 566 555 L 560 570 L 556 573 L 552 569 L 539 542 L 494 467 L 473 429 L 470 426 L 469 422 L 444 381 L 428 351 L 425 348 L 419 335 L 415 333 L 411 338 L 404 352 L 401 355 L 399 361 L 393 369 L 391 375 L 416 419 L 419 422 L 420 426 L 429 439 L 431 445 L 455 487 L 464 500 L 466 506 L 479 526 L 515 591 L 539 629 L 574 631 L 579 627 L 584 619 L 605 576 L 688 424 L 715 370 L 718 367 L 724 353 L 728 348 L 740 323 L 743 320 L 755 295 L 759 290 L 795 219 L 798 216 L 805 200 L 808 197 L 815 181 L 818 178 L 820 172 L 848 122 L 875 68 Z M 79 64 L 78 179 L 82 184 L 334 183 L 336 187 L 91 579 L 70 616 L 64 623 L 64 629 L 510 629 L 510 625 L 500 609 L 498 603 L 491 592 L 484 587 L 211 588 L 143 587 L 141 585 L 144 577 L 155 559 L 159 555 L 180 518 L 209 474 L 214 464 L 239 426 L 245 414 L 323 291 L 340 261 L 389 185 L 390 181 L 412 147 L 412 143 L 410 141 L 125 142 L 121 138 L 121 112 L 125 107 L 474 106 L 476 108 L 476 112 L 460 134 L 425 190 L 425 192 L 401 229 L 394 243 L 355 303 L 354 307 L 316 366 L 305 386 L 260 455 L 260 457 L 235 497 L 234 501 L 220 521 L 204 548 L 206 552 L 463 551 L 463 547 L 444 514 L 437 509 L 284 510 L 282 508 L 282 504 L 308 464 L 334 420 L 338 416 L 345 403 L 368 369 L 415 290 L 449 238 L 494 163 L 499 157 L 499 155 L 539 90 L 552 65 L 550 63 Z"/>
+  </symbol>
+</svg>
+
+<!-- Verificando sesión -->
+<div id="checking" class="gate">
+  <div class="sync-card">
+    <div class="sync-progress-track"><div class="sync-progress-bar"></div></div>
+    <div class="sync-text" id="checkingText">Verificando sesión…</div>
+  </div>
+</div>
+
+<!-- Ingreso -->
+<div id="loginGate" class="gate" hidden>
+  <form class="login-card" id="loginForm" novalidate>
+    <div class="login-logo"><svg role="img" aria-label="Z&amp;V"><use href="#logo-zv"/></svg></div>
+    <div class="eyebrow">Estudio Contable Z&amp;V</div>
+    <h2>Acceso al equipo</h2>
+    <div class="field">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" autocomplete="username" placeholder="nombre@ejemplo.com">
+    </div>
+    <div class="field">
+      <label for="loginPassword">Contraseña</label>
+      <div class="password-wrap">
+        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+        <button type="button" class="toggle-password-btn" id="togglePasswordBtn" title="Mostrar contraseña" aria-label="Mostrar contraseña">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+      </div>
+    </div>
+    <button type="submit" class="btn primary block" id="loginSubmit">Ingresar</button>
+    <div class="login-error" id="loginError" role="alert"></div>
+  </form>
+</div>
+
+<!-- Portal -->
+<div class="app" id="appRoot" hidden>
+  <header class="top">
+    <div class="top-row">
+      <div class="clock-top" id="clockTop"></div>
+      <div class="user-bar">
+        <span id="userEmail"></span>
+        <button class="btn primary" id="logoutBtn" type="button">Cerrar sesión</button>
+      </div>
+    </div>
+    <div class="brand-row">
+      <div class="logo-badge"><svg role="img" aria-label="Z&amp;V Estudio Contable"><use href="#logo-zv"/></svg></div>
+      <div>
+        <h1>ESTUDIO CONTABLE Z&amp;V</h1>
+        <div class="sync-status" id="syncStatus"><span class="sync-dot"></span><span id="syncStatusText">Conectando…</span></div>      </div>
+    </div>
+  </header>
+
+  <div class="portal-alert" id="certAlert" hidden></div>
+
+  <main id="tools"></main>
+
+  <footer class="note">Estudio Contable Z&amp;V</footer>
+</div>
+
+<script>
+// --- Herramientas: cada una vive en su carpeta dentro de este mismo sitio ---
+const ICONS = {
+  cobranza: '<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>',
+  vep: '<path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h3"/>',
+  autonomo: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>',
+  cuit: '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+  informe: '<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'
+};
+
+const GROUPS = [
+  { title: "PAGOS ARCA", tools: [
+    { name: "VEP MONOTRIBUTO MENSUAL", key: "vepMonotributo", icon: "vep", href: "vep-monotributo/",
+      desc: "Para cargar el importe del VEP de monotributo de cada cliente y enviárselo por correo o WhatsApp antes del día 15." },
+    { name: "VEP AUTONOMOS MENSUAL", key: "vepAutonomos", icon: "autonomo", href: "vep-autonomos/",
+      desc: "Para cargar el monto de aportes de autónomos de cada cliente según su vencimiento y enviárselo por correo." }
+  ]},
+  { title: "CLIENTES", tools: [
+    { name: "GESTION DE COBRANZAS", key: "cobranzas", icon: "cobranza", href: "gestion-de-cobranzas/",
+      desc: "Para cargar los honorarios del mes, enviar el aviso de cobro a cada cliente y descargar el reporte de honorarios." },
+    { name: "CONSULTA DE CUITS", key: "consultaCuits", icon: "cuit", href: "consulta-cuits/",
+      desc: "Para consultar los datos fiscales de varios CUIT a la vez y descargar el resultado en Excel." }
+  ]},
+  { title: "INFORMES", tools: [
+    { name: "INFORME MENSUAL MONOTRIBUTO", key: "informeMonotributo", icon: "informe", href: "informe-monotributo/",
+      desc: "Para armar el informe mensual de facturación y categoría de cada monotributista y enviarlo en PDF." }
+  ]}
+];
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+document.getElementById("tools").innerHTML = GROUPS.map(g => `
+  <section aria-label="${esc(g.title)}">
+    <div class="section-title"><strong>${esc(g.title)}</strong></div>
+    <div class="grid">
+      ${g.tools.map(t => `
+        <article class="card">
+          <div class="card-head">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t.icon]}</svg></div>
+            <div class="name">${esc(t.name)}</div>
+          </div>
+          <p class="desc">${esc(t.desc)}</p>
+          <div class="status" id="st-${t.key}"><span class="status-note">Cargando estado del mes…</span></div>
+          <div class="actions"><a class="btn primary" href="${esc(t.href)}">Abrir</a></div>
+        </article>`).join("")}
+    </div>
+  </section>`).join("");
+
+// Fecha y hora arriba a la izquierda (igual que en las herramientas)
+function tickClock() {
+  const d = new Date();
+  const fecha = d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const hora = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  document.getElementById("clockTop").textContent = fecha.charAt(0).toUpperCase() + fecha.slice(1) + " · " + hora + " h";
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+
+// --- Acceso (Firebase Authentication, mismo proyecto que las herramientas) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDlQOYJ3Rn-OuTxgTrfqBFmpBGKZKJCXWE",
+  authDomain: "cobranzas-cdra.firebaseapp.com",
+  databaseURL: "https://cobranzas-cdra-default-rtdb.firebaseio.com",
+  projectId: "cobranzas-cdra",
+  storageBucket: "cobranzas-cdra.firebasestorage.app",
+  messagingSenderId: "689249858006",
+  appId: "1:689249858006:web:9195ecd66f3849375d3477"
+};
+
+const $ = id => document.getElementById(id);
+function show(view) {
+  $("checking").hidden = view !== "checking";
+  $("loginGate").hidden = view !== "login";
+  $("appRoot").hidden = view !== "app";
+}
+
+if (typeof firebase === "undefined") {
+  $("checkingText").textContent = "No se pudo conectar con el servicio de acceso. Revisá la conexión a internet y recargá la página.";
+} else {
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // La duración de la sesión (2 horas fijas) la controla sesion.js.
+
+  $("loginForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const email = $("loginEmail").value.trim();
+    const pass = $("loginPassword").value;
+    const errEl = $("loginError");
+    errEl.textContent = "";
+    if (!email || !pass) { errEl.textContent = "Completá email y contraseña."; return; }
+    const btn = $("loginSubmit");
+    btn.disabled = true;
+    btn.textContent = "Ingresando…";
+    auth.signInWithEmailAndPassword(email, pass).catch(err => {
+      errEl.textContent = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-email"].includes(err.code)
+        ? "Email o contraseña incorrectos."
+        : err.code === "auth/too-many-requests"
+          ? "Demasiados intentos. Esperá unos minutos y volvé a probar."
+          : "No se pudo iniciar sesión: " + err.message;
+    }).finally(() => { btn.disabled = false; btn.textContent = "Ingresar"; });
+  });
+
+  const eyeIcon = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle>`;
+  const eyeOffIcon = `<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><path d="M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a9.26 9.26 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line>`;
+  $("togglePasswordBtn").addEventListener("click", () => {
+    const input = $("loginPassword"), btn = $("togglePasswordBtn");
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    btn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${showing ? eyeIcon : eyeOffIcon}</svg>`;
+    btn.title = showing ? "Mostrar contraseña" : "Ocultar contraseña";
+    btn.setAttribute("aria-label", btn.title);
+  });
+
+  $("logoutBtn").addEventListener("click", () => auth.signOut());
+
+  // Estado de conexión con la nube (misma indicación que las herramientas)
+  let connectedRef = null;
+  function watchConnection() {
+    if (connectedRef || typeof firebase.database !== "function") { if (!connectedRef) revealApp(); return; }
+    connectedRef = firebase.database().ref(".info/connected");
+    connectedRef.on("value", snap => {
+      const ok = snap.val() === true;
+      $("syncStatus").className = "sync-status" + (ok ? " ok" : "");
+      $("syncStatusText").textContent = ok ? "Sincronizado en la nube" : "Conectando…";
+      if (ok) revealApp();
+    });
+  }
+  function stopWatchingConnection() {
+    if (connectedRef) { connectedRef.off(); connectedRef = null; }
+  }
+
+  // Pantalla "Sincronizando con la nube…" al ingresar (igual que en las herramientas):
+  // se quita cuando se confirma la conexión con la nube, o a los 5 segundos como máximo.
+  let appRevealed = false;
+  let revealTimer = null;
+  function showSyncing() {
+    appRevealed = false;
+    $("checkingText").innerHTML = "Sincronizando con la nube…<br>Esperá un momento.";
+    show("checking");
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(revealApp, 5000);
+  }
+  function revealApp() {
+    if (appRevealed || !auth.currentUser) return;
+    appRevealed = true;
+    clearTimeout(revealTimer);
+    show("app");
+  }
+
+  // --- Estado del mes en cada tarjeta ---
+  // VEP Monotributo, VEP Autónomos, Cobranzas e Informe publican su resumen en resumenPortal
+  // (ver resumen.js) cada vez que alguien los usa. Consulta de CUITs se cuenta desde su historial.
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const WORKER_URL = "https://consulta-cuits.christian-flamini.workers.dev";
+  const AVISO_CERTIFICADO_DIAS = 60; // mismo aviso que muestra Consulta de CUITs
+  const statusRefs = [];
+  let resumenes = {};
+  let cuitsDelMes = null;
+  let certificado = null; // { vence: "AAAA-MM-DD", dias } o { error }
+  let exportaciones = null; // { herramienta: { fecha } } — último "Exportar Excel" de cada una
+  const DIAS_RESPALDO = 31; // pasado este plazo sin exportar, la tarjeta lo marca en naranja
+
+  const pad2 = n => String(n).padStart(2, "0");
+  const claveMes = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const nombreMes = d => MESES[d.getMonth()] + " " + d.getFullYear();
+  const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const chip = (n, texto, tono) => `<span class="chip ${tono || ""}">${n} ${texto}</span>`;
+  const plural = (n, uno, varios) => n === 1 ? uno : varios;
+
+  function haceCuanto(ms) {
+    if (!ms) return "";
+    const min = Math.round((Date.now() - ms) / 60000);
+    if (min < 1) return "Actualizado recién";
+    if (min < 60) return `Actualizado hace ${min} min`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `Actualizado hace ${h} ${plural(h, "hora", "horas")}`;
+    const d = new Date(ms);
+    return `Actualizado el ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  }
+
+  function pintarEstado(key, titulo, chipsHtml, nota) {
+    const el = $("st-" + key);
+    if (!el) return;
+    el.innerHTML = `<div class="status-title">${esc(titulo)}</div>` +
+      (chipsHtml ? `<div class="chips">${chipsHtml}</div>` : "") +
+      (nota ? `<div class="status-note">${esc(nota)}</div>` : "");
+  }
+
+  function sinDatos(key, titulo, mesTxt) {
+    pintarEstado(key, titulo, "", `Sin datos de ${mesTxt} todavía. Se completa al abrir la herramienta.`);
+  }
+
+  function renderEstados() {
+    const hoy = new Date();
+    const mesActual = claveMes(hoy);
+    const txtActual = nombreMes(hoy);
+
+    // VEP Monotributo y Cobranzas: mismos contadores que muestran arriba las herramientas.
+    [["vepMonotributo", "VEP de " + txtActual], ["cobranzas", "Cobranzas de " + txtActual]].forEach(([key, titulo]) => {
+      const r = (resumenes[key] || {})[mesActual];
+      if (!r) return sinDatos(key, titulo, txtActual);
+      pintarEstado(key, titulo,
+        chip(r.pendiente, plural(r.pendiente, "pendiente", "pendientes"), r.pendiente ? "warn" : "") +
+        chip(r.enviado, plural(r.enviado, "enviado", "enviados"), r.enviado ? "ok" : "") +
+        chip(r.sinCargar, "sin cargar", "") ,
+        `${r.total} clientes · ${haceCuanto(r.actualizado)}`);
+    });
+
+    // VEP Autónomos: pendientes y enviados son los clientes que reciben el VEP por correo.
+    (() => {
+      const key = "vepAutonomos", titulo = "VEP de " + txtActual;
+      const r = (resumenes[key] || {})[mesActual];
+      if (!r) return sinDatos(key, titulo, txtActual);
+      pintarEstado(key, titulo,
+        chip(r.pendiente, plural(r.pendiente, "pendiente", "pendientes"), r.pendiente ? "warn" : "") +
+        chip(r.enviado, plural(r.enviado, "enviado", "enviados"), r.enviado ? "ok" : ""),
+        `${r.total} clientes · ${haceCuanto(r.actualizado)}`);
+    })();
+
+    // Informe Mensual: cada mes se carga la facturación del mes anterior.
+    (() => {
+      const key = "informeMonotributo";
+      const mesCarga = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      const titulo = "Facturación de " + nombreMes(mesCarga);
+      const r = (resumenes[key] || {})[claveMes(mesCarga)];
+      if (!r) return sinDatos(key, titulo, nombreMes(mesCarga));
+      pintarEstado(key, titulo,
+        chip(r.sinCargar, "sin cargar", r.sinCargar ? "warn" : "") +
+        chip(r.cargados, plural(r.cargados, "cargado", "cargados"), r.cargados ? "ok" : "") +
+        (r.suben ? chip(r.suben, plural(r.suben, "sube de categoría", "suben de categoría"), "danger") : "") +
+        (r.tope ? chip(r.tope, "cerca del tope", "danger") : "") +
+        (r.inconsistentes ? chip(r.inconsistentes, plural(r.inconsistentes, "inconsistente", "inconsistentes"), "danger") : ""),
+        `${r.activos} clientes activos · ${haceCuanto(r.actualizado)}`);
+    })();
+
+    // Consulta de CUITs: consultas del mes y vencimiento del certificado de ARCA.
+    (() => {
+      const key = "consultaCuits", titulo = "Consultas de " + txtActual;
+      let chips = cuitsDelMes === null ? "" : chip(cuitsDelMes, plural(cuitsDelMes, "CUIT consultado", "CUITs consultados"), "");
+      let nota = cuitsDelMes === null ? "Cargando…" : "";
+      if (certificado && certificado.vence) {
+        const f = certificado.vence.split("-").reverse().join("/");
+        const tono = certificado.dias < 0 ? "danger" : certificado.dias <= AVISO_CERTIFICADO_DIAS ? "warn" : "ok";
+        chips += `<span class="chip ${tono}">${certificado.dias < 0 ? "Certificado vencido el " + f : "Certificado vence el " + f}</span>`;
+      } else if (certificado && certificado.error) {
+        nota = (nota ? nota + " · " : "") + "No se pudo consultar el vencimiento del certificado.";
+      }
+      pintarEstado(key, titulo, chips, nota);
+    })();
+
+    // Recordatorio del Excel de respaldo: fecha del último "Exportar Excel" de cada herramienta.
+    if (exportaciones !== null) {
+      ["vepMonotributo", "vepAutonomos", "cobranzas", "informeMonotributo"].forEach(key => {
+        const el = $("st-" + key);
+        if (!el) return;
+        const fecha = (exportaciones[key] || {}).fecha;
+        const dias = fecha ? Math.floor((Date.now() - fecha) / 86400000) : null;
+        let html;
+        if (!fecha) {
+          html = `<span class="chip warn">Excel sin exportar desde el sitio</span>`;
+        } else if (dias > DIAS_RESPALDO) {
+          html = `<span class="chip warn">Excel exportado hace ${dias} días</span>`;
+        } else {
+          const d = new Date(fecha);
+          html = `<span class="status-note">Excel exportado el ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}</span>`;
+        }
+        el.insertAdjacentHTML("beforeend", `<div class="export-line" title="El Excel exportado es la copia de respaldo de los datos. Exportalo después de cada carga mensual.">${html}</div>`);
+      });
+    }
+
+    // Aviso general arriba si el certificado vence pronto o ya venció.
+    const alerta = $("certAlert");
+    if (certificado && certificado.vence && certificado.dias <= AVISO_CERTIFICADO_DIAS) {
+      const f = certificado.vence.split("-").reverse().join("/");
+      alerta.className = "portal-alert" + (certificado.dias < 0 ? " danger" : "");
+      alerta.textContent = certificado.dias < 0
+        ? `El certificado de ARCA de Consulta de CUITs venció el ${f}. Hay que renovarlo para seguir consultando.`
+        : `El certificado de ARCA de Consulta de CUITs vence el ${f} (en ${certificado.dias} ${plural(certificado.dias, "día", "días")}). Acordate de renovarlo.`;
+      alerta.hidden = false;
+    } else {
+      alerta.hidden = true;
+    }
+  }
+
+  async function consultarCertificado() {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const r = await fetch(WORKER_URL + "/estado", { headers: { "Authorization": "Bearer " + token } });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.certificadoVence) throw new Error(data.error || "sin fecha");
+      const dias = Math.floor((Date.parse(data.certificadoVence + "T00:00:00-03:00") - Date.now()) / 86400000);
+      certificado = { vence: data.certificadoVence, dias };
+    } catch (e) {
+      certificado = { error: true };
+    }
+    renderEstados();
+  }
+
+  function startStatus() {
+    if (statusRefs.length || typeof firebase.database !== "function") return;
+    const db = firebase.database();
+    const resumenRef = db.ref("resumenPortal");
+    resumenRef.on("value", snap => { resumenes = snap.val() || {}; renderEstados(); }, () => renderEstados());
+    const cuitsRef = db.ref("consultaCuits/cuits");
+    cuitsRef.on("value", snap => {
+      const desde = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+      cuitsDelMes = Object.values(snap.val() || {}).filter(c => (c.consultadoEl || 0) >= desde).length;
+      renderEstados();
+    }, () => { cuitsDelMes = null; renderEstados(); });
+    const exportRef = db.ref("exportacionesExcel");
+    exportRef.on("value", snap => { exportaciones = snap.val() || {}; renderEstados(); }, () => { exportaciones = null; renderEstados(); });
+    statusRefs.push(resumenRef, cuitsRef, exportRef);
+    consultarCertificado();
+  }
+  function stopStatus() {
+    statusRefs.splice(0).forEach(ref => ref.off());
+    resumenes = {}; cuitsDelMes = null; certificado = null; exportaciones = null;
+  }
+  // Refresca los textos "Actualizado hace…" cada minuto.
+  setInterval(() => { if (statusRefs.length) renderEstados(); }, 60000);
+
+  // Al abrir la página, Firebase puede avisar "sin sesión" un instante antes de recuperar
+  // la sesión guardada. Ante esa primera respuesta se espera un poco antes de mostrar el ingreso.
+  let firstAuthEvent = true;
+  let pendingLogin = null;
+
+  auth.onAuthStateChanged(user => {
+    clearTimeout(pendingLogin);
+    const isFirst = firstAuthEvent;
+    firstAuthEvent = false;
+    if (!user && isFirst) {
+      pendingLogin = setTimeout(() => {
+        if (!auth.currentUser) { stopWatchingConnection(); show("login"); $("loginEmail").focus(); }
+      }, 1500);
+      return;
+    }
+    if (user) {
+      $("userEmail").textContent = user.email || "";
+      $("loginPassword").value = "";
+      showSyncing();
+      watchConnection();
+      startStatus();
+    } else {
+      clearTimeout(revealTimer);
+      $("checkingText").textContent = "Verificando sesión…";
+      stopWatchingConnection();
+      stopStatus();
+      show("login");
+      $("loginEmail").focus();
+    }
+  });
+}
+</script>
+<script src="sesion.js?v=20261004b"></script>
+</body>
+</html>
