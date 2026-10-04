@@ -68,6 +68,10 @@ En las cuatro herramientas, "Importar Excel" suma al contenido actual: los clien
 
 `enter.js` hace que, en VEP Monotributo, VEP Autónomos, Cobranzas e Informe Mensual, presionar Enter en un campo toque el botón de guardar o agregar de ese mismo recuadro (lista de botones en `BOTONES`). No actúa en cuadros de texto largos, en el buscador ni si el botón está desactivado. El ingreso (portal y herramientas) ya ingresaba con Enter.
 
+## Uso desde el celular
+
+`comun.css` agranda botones, meses, filtros y buscador solo en pantallas táctiles (`@media (pointer: coarse)`); en la computadora no cambia nada. `meses.js` desliza la barra de meses para que el mes elegido quede a la vista en pantallas angostas.
+
 ## Estilos comunes
 
 `comun.css` define los tamaños compartidos (títulos, logo, letra, botones, pie de página). Lo cargan el portal y todas las herramientas: un cambio ahí se aplica en todas las páginas.
