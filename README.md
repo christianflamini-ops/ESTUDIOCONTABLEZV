@@ -58,6 +58,10 @@ La función "Cambios pendientes" (un resumen para pasarle a Claude y que actuali
 
 En las cuatro herramientas, "Importar Excel" suma al contenido actual: los clientes que ya están se actualizan, los nuevos se agregan y no se borra ninguno. Las celdas vacías del archivo no borran datos ya cargados. VEP Autónomos reconoce a los clientes por CUIT; Informe Mensual, por CUIT o por nombre; VEP Monotributo y Cobranzas, por nombre.
 
+## Enter para guardar
+
+`enter.js` hace que, en VEP Monotributo, VEP Autónomos, Cobranzas e Informe Mensual, presionar Enter en un campo toque el botón de guardar o agregar de ese mismo recuadro (lista de botones en `BOTONES`). No actúa en cuadros de texto largos, en el buscador ni si el botón está desactivado. El ingreso (portal y herramientas) ya ingresaba con Enter.
+
 ## Estilos comunes
 
 `comun.css` define los tamaños compartidos (títulos, logo, letra, botones, pie de página). Lo cargan el portal y todas las herramientas: un cambio ahí se aplica en todas las páginas.
