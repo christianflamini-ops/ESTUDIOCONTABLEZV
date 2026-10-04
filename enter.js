@@ -28,8 +28,13 @@
     if (e.key !== "Enter" || e.defaultPrevented || e.isComposing) return;
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
     const campo = e.target;
-    // Informe Mensual: al entrar pide confirmar el período sin ningún campo con el cursor.
     if (campo === document.body || campo === document.documentElement) {
+      // Pantalla de ingreso visible sin el cursor en un campo (por ejemplo, el navegador
+      // completó solo el email y la contraseña): Enter ingresa.
+      const ingreso = document.getElementById("loginGate");
+      const ingresar = document.getElementById("loginSubmit");
+      if (ingreso && ingresar && visible(ingreso) && !ingresar.disabled) { e.preventDefault(); ingresar.click(); return; }
+      // Informe Mensual: al entrar pide confirmar el período sin ningún campo con el cursor.
       const continuar = document.getElementById("periodoContinuar");
       if (continuar && visible(continuar) && !continuar.disabled) { e.preventDefault(); continuar.click(); }
       return;

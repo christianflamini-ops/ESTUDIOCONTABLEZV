@@ -176,7 +176,7 @@
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .sync-progress-bar { animation: none; width: 100%; } }
 </style>
-<link rel="stylesheet" href="comun.css?v=20261004b">
+<link rel="stylesheet" href="comun.css?v=20261004c">
 </head>
 <body>
 
@@ -359,6 +359,15 @@ if (typeof firebase === "undefined") {
   });
 
   $("logoutBtn").addEventListener("click", () => auth.signOut());
+
+  // Enter ingresa aunque el cursor no esté en un campo (por ejemplo, cuando el navegador
+  // completó solo el email y la contraseña). Dentro de los campos ya lo resuelve el formulario.
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || $("loginGate").hidden) return;
+    if (e.target.closest && e.target.closest("#loginForm")) return;
+    e.preventDefault();
+    $("loginForm").requestSubmit();
+  });
 
   // Estado de conexión con la nube (misma indicación que las herramientas)
   let connectedRef = null;
@@ -598,6 +607,6 @@ if (typeof firebase === "undefined") {
   });
 }
 </script>
-<script src="sesion.js?v=20261004b"></script>
+<script src="sesion.js?v=20261004c"></script>
 </body>
 </html>
