@@ -1,6 +1,6 @@
 <!doctype html>
 <title>VEP AUTONOMOS MENSUAL</title>
-<meta name="zv-version" content="20261004-1947">
+<meta name="zv-version" content="20261004-2009">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -368,7 +368,8 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-1947">
+<link rel="stylesheet" href="../comun.css?v=20261004-2009">
+<script src="../papelera.js?v=20261004-2009"></script>
 
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
@@ -406,6 +407,7 @@
       <li>Envialo según el medio del cliente. Para los de correo, <b>Guardar borradores en Gmail</b> crea juntos los correos con el VEP adjunto.</li>
       <li>Marcá el cliente como <b>Enviado</b>. <b>Verificar enviados</b> marca solos los borradores que ya salieron de Gmail.</li>
       <li>Todo se guarda en la nube y lo ve el equipo. Para tener la planilla al día, usá <b>Exportar Excel</b> y reemplazá el archivo anterior.</li>
+      <li>Si eliminás un cliente por error, recuperalo desde <b>Papelera</b> (al lado de <b>+ Agregar cliente</b>): queda ahí 30 días con todos sus datos.</li>
     </ol>
   </details>
 
@@ -652,19 +654,41 @@ function addCustomClient(data) {
   return true;
 }
 
+// Rutas de la nube con datos del cliente. Las usan la papelera (copia antes de borrar) y deleteCustomClient.
+function rutasDeCliente(cliente) {
+  const k = fbKey(cliente);
+  const rutas = [`customClientes/${k}`, `nameOverrides/${k}`, `periodosOverrides/${k}`];
+  Object.keys(state).forEach(period => rutas.push(`state/${period}/${k}`));
+  [["bodyOverrides", bodyOverrides], ["attachments", attachments]].forEach(([carpeta, mapa]) => {
+    Object.keys(mapa).filter(x => x.endsWith("|" + cliente)).forEach(x => rutas.push(`${carpeta}/${x.split("|")[0]}/${k}`));
+  });
+  return rutas;
+}
+
+// Primero guarda la copia en la papelera (../papelera.js); si no se pudo, no borra nada.
+async function enviarAPapelera(cliente) {
+  const c = allClientes().find(x => x.cliente === cliente);
+  try {
+    await zvPapelera.enviar({cliente, nombre: c ? displayName(c) : cliente, rutas: rutasDeCliente(cliente)});
+  } catch (e) {
+    toast("No se pudo guardar en la papelera, así que el cliente no se eliminó. Revisá la conexión.", true);
+    return false;
+  }
+  deleteCustomClient(cliente);
+  renderAll();
+  toast("Cliente enviado a la papelera");
+  return true;
+}
+
 function deleteCustomClient(cliente) {
+  rutasDeCliente(cliente).forEach(fbRemove);
   customClientes = customClientes.filter(c => c.cliente !== cliente);
   saveCustomClientes(customClientes);
-  fbRemove(`customClientes/${fbKey(cliente)}`);
-  delete nameOverrides[cliente]; saveNameOverrides(nameOverrides); fbRemove(`nameOverrides/${fbKey(cliente)}`);
-  delete periodosOverrides[cliente]; savePeriodosOverrides(periodosOverrides); fbRemove(`periodosOverrides/${fbKey(cliente)}`);
-  delete appliedChanges.nuevos[cliente]; saveAppliedChanges(appliedChanges);
-  Object.keys(state).forEach(period => { delete state[period][cliente]; fbRemove(`state/${period}/${fbKey(cliente)}`); });
-  [bodyOverrides, attachments].forEach((mapa, i) => {
-    Object.keys(mapa).filter(k => k.endsWith("|" + cliente)).forEach(k => {
-      delete mapa[k];
-      fbRemove(`${i === 0 ? "bodyOverrides" : "attachments"}/${k.split("|")[0]}/${fbKey(cliente)}`);
-    });
+  delete nameOverrides[cliente]; saveNameOverrides(nameOverrides);
+  delete periodosOverrides[cliente]; savePeriodosOverrides(periodosOverrides);
+  Object.keys(state).forEach(period => { delete state[period][cliente]; });
+  [bodyOverrides, attachments].forEach(mapa => {
+    Object.keys(mapa).filter(k => k.endsWith("|" + cliente)).forEach(k => { delete mapa[k]; });
   });
   saveBodyOverrides(bodyOverrides);
   saveAttachments(attachments);
@@ -748,6 +772,11 @@ let fbListenersAttached = false;
 function attachFbListeners() {
   if (fbListenersAttached) return;
   fbListenersAttached = true;
+
+  if (window.zvPapelera) zvPapelera.iniciar({
+    db: fbDb, herramienta: "vepAutonomos", prefijo: FB_NS, toast,
+    existeCliente: name => allClientes().some(c => fbKey(c.cliente) === fbKey(name))
+  });
 
   fbDb.ref(".info/connected").on("value", snap => {
     if (snap.val() === true) setSyncStatus("ok", "Sincronizado en la nube");
@@ -1362,15 +1391,14 @@ function wireListEvents() {
     });
   });
   document.querySelectorAll('[data-role="delete-custom"]').forEach(el => {
-    el.addEventListener("click", e => {
+    el.addEventListener("click", async e => {
       e.stopPropagation();
       const cliente = allClientes().find(x => x.cliente === el.dataset.cliente);
       if (!confirm(`¿Eliminar a ${cliente ? displayName(cliente) : el.dataset.cliente}?
 
-Se borran también todos sus datos cargados en esta herramienta. No se puede deshacer.`)) return;
-      deleteCustomClient(el.dataset.cliente);
-      renderAll();
-      toast("Cliente eliminado");
+Va a la Papelera junto con todos sus datos cargados en esta herramienta. Se puede restaurar durante 30 días.`)) return;
+      el.disabled = true;
+      if (!await enviarAPapelera(el.dataset.cliente)) el.disabled = false;
     });
   });
 }
@@ -2134,9 +2162,9 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
 }
 </script>
 
-<script src="../sesion.js?v=20261004-1947"></script>
-<script src="../version.js?v=20261004-1947"></script>
-<script src="../resumen.js?v=20261004-1947"></script>
-<script src="../plantilla.js?v=20261004-1947"></script>
-<script src="../enter.js?v=20261004-1947"></script>
-<script src="../meses.js?v=20261004-1947"></script>
+<script src="../sesion.js?v=20261004-2009"></script>
+<script src="../version.js?v=20261004-2009"></script>
+<script src="../resumen.js?v=20261004-2009"></script>
+<script src="../plantilla.js?v=20261004-2009"></script>
+<script src="../enter.js?v=20261004-2009"></script>
+<script src="../meses.js?v=20261004-2009"></script>

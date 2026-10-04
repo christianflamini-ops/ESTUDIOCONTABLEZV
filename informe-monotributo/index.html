@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>INFORME MENSUAL MONOTRIBUTO</title>
-<meta name="zv-version" content="20261004-1947">
+<meta name="zv-version" content="20261004-2009">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -756,7 +756,8 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-1947">
+<link rel="stylesheet" href="../comun.css?v=20261004-2009">
+<script src="../papelera.js?v=20261004-2009"></script>
 </head>
 <body>
 
@@ -802,6 +803,7 @@
       <li>La herramienta suma la facturación acumulada, la compara con las escalas de monotributo e indica la categoría que corresponde y la acción a seguir.</li>
       <li>Revisá la vista previa del informe de cada cliente. Podés editar el texto antes de descargarlo en PDF.</li>
       <li>Envialo: <b>Guardar borradores en Gmail</b> para los de correo, o descargá los informes en ZIP para WhatsApp.</li>
+      <li>Si eliminás un cliente por error, recuperalo desde <b>Papelera</b> (al lado de <b>+ Agregar cliente</b>): queda ahí 30 días con todos sus datos.</li>
     </ol>
   </details>
 
@@ -2086,6 +2088,35 @@ function agregarCliente() {
   toast('Cliente agregado');
 }
 
+// Eliminar un cliente: primero se guarda una copia en la papelera (../papelera.js), desde donde se
+// puede restaurar durante 30 días; si la copia no se pudo guardar, no se elimina nada.
+// El registro de envíos (state.envios) no se toca: queda asociado al id del cliente para cuando se restaure.
+async function eliminarCliente(id, boton) {
+  const c = state.clients.find(x => x.id === id);
+  if (!c) return;
+  if (!confirmarDescartarEdicion()) return;
+  if (!confirm(`¿Eliminar a ${c.nombre}?\n\nVa a la Papelera junto con todos sus datos cargados en esta herramienta. Se puede restaurar durante 30 días.`)) return;
+  if (!fbEnabled || !fbUsuario || !nubeLista || !window.zvPapelera) {
+    return toast('Para eliminar un cliente hace falta estar conectado a la nube. Revisá la conexión.', true);
+  }
+  boton.disabled = true;
+  clearTimeout(saveTimer);
+  guardarEstado(state); // que la copia de la papelera tenga los últimos cambios
+  try {
+    await zvPapelera.enviar({ cliente: c.id, nombre: c.nombre, rutas: [`clientes/${c.id}`] });
+  } catch (e) {
+    boton.disabled = false;
+    return toast('No se pudo guardar en la papelera, así que el cliente no se eliminó. Revisá la conexión.', true);
+  }
+  state.clients = state.clients.filter(x => x.id !== id);
+  if (ui.abierto === id) ui.abierto = null;
+  // Se sube en el momento (sin la espera de persistir), para que una lectura de la nube no lo devuelva.
+  clearTimeout(saveTimer);
+  guardarEstado(state);
+  render();
+  toast('Cliente enviado a la papelera');
+}
+
 // ---------- Panel de carga mensual ----------
 
 function renderCarga() {
@@ -2467,6 +2498,7 @@ function cardBody(c, a, escala) {
       <div class="actions">
         <button class="btn primary" data-pdf="${c.id}">${ICON.pdf} Descargar informe PDF</button>
         ${esCorreo(c) && !c.baja ? `<button class="btn" data-act="gmail-uno" data-id="${c.id}">Crear borrador en Gmail</button>` : ''}
+        <button class="btn" data-act="eliminar-cliente" data-id="${c.id}">Eliminar cliente</button>
       </div>
     </div>`;
 }
@@ -3127,6 +3159,7 @@ document.addEventListener('click', e => {
       break;
     case 'agregar-cancelar': ui.agregar = false; renderAgregar(); break;
     case 'agregar-ok': agregarCliente(); break;
+    case 'eliminar-cliente': eliminarCliente(t.dataset.id, t); break;
   }
 });
 
@@ -3305,6 +3338,11 @@ let escuchandoNube = false;
 function escucharNube() {
   if (escuchandoNube) return;
   escuchandoNube = true;
+  if (window.zvPapelera) zvPapelera.iniciar({
+    db: fbDb, herramienta: 'informeMonotributo', prefijo: FB_NS, toast,
+    botonJunto: 'toggleAgregar', panelDespuesDe: 'agregarWrap',
+    existeCliente: (id, e) => state.clients.some(x => x.id === id || norm(x.nombre) === norm(e.nombre)),
+  });
   fbDb.ref('.info/connected').on('value', s => {
     if (s.val() === true) setSyncStatus('ok', 'Sincronizado en la nube');
     else setSyncStatus('', 'Conectando…');
@@ -3401,11 +3439,11 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
   });
 }
 </script>
-<script src="../sesion.js?v=20261004-1947"></script>
-<script src="../version.js?v=20261004-1947"></script>
-<script src="../resumen.js?v=20261004-1947"></script>
-<script src="../plantilla.js?v=20261004-1947"></script>
-<script src="../enter.js?v=20261004-1947"></script>
-<script src="../meses.js?v=20261004-1947"></script>
+<script src="../sesion.js?v=20261004-2009"></script>
+<script src="../version.js?v=20261004-2009"></script>
+<script src="../resumen.js?v=20261004-2009"></script>
+<script src="../plantilla.js?v=20261004-2009"></script>
+<script src="../enter.js?v=20261004-2009"></script>
+<script src="../meses.js?v=20261004-2009"></script>
 </body>
 </html>
