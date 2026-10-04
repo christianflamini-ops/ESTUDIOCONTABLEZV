@@ -58,6 +58,10 @@ h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.
    al día alcanza con "Exportar Excel" y reemplazar el archivo anterior. Se oculta en todas las herramientas. */
 #toggleChanges, #changesWrap, #toggleCambios, #cambiosWrap { display: none !important; }
 
+/* El ingreso es siempre el del portal: en las herramientas (las que tienen "Volver al portal")
+   su pantalla de ingreso propia no se muestra; sesion.js lleva al portal cuando no hay sesión. */
+body:has(a.back-portal) #loginGate { display: none !important; }
+
 /* Botones */
 .btn { font-size: 12.5px; padding: 7px 16px; border-radius: 980px; }
 

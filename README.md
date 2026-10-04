@@ -37,6 +37,8 @@ Las carpetas de cada herramienta en el Escritorio (GESTION DE COBRANZAS, VEP MON
 
 ## Duración de la sesión
 
+El ingreso es siempre el del portal: en las herramientas, si no hay sesión (se tocó "Cerrar sesión", venció el plazo o se abrió la herramienta sin haber ingresado), `sesion.js` lleva al ingreso del portal, y la pantalla de ingreso propia de cada herramienta queda oculta desde `comun.css`. Si la herramienta se abrió sin sesión o venció el plazo, después de ingresar se vuelve a ella.
+
 `sesion.js` cierra la sesión a las 2 horas de haber ingresado, se esté usando o no. El plazo es el mismo en todas las páginas: pasar de una herramienta a otra no lo reinicia. Para cambiar la duración, editar `DURACION_SESION_MS` en ese archivo.
 
 ## Estado del mes en el portal
