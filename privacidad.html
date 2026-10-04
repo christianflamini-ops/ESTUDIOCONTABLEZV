@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Política de privacidad — Estudio Contable Z&amp;V</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text: #1d1d1f; --text-muted: #6e6e73; --accent: #0071e3;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #000000; --surface: #1d1d1f; --text: #f5f5f7; --text-muted: #86868b; --accent: #2997ff; --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 20px rgba(0,0,0,.45); color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #000000; --surface: #1d1d1f; --text: #f5f5f7; --text-muted: #86868b; --accent: #2997ff; --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 20px rgba(0,0,0,.45); color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.6; padding-inline: 16px; padding-block: 32px 64px; }
+  main { max-width: 720px; margin: 0 auto; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 28px clamp(18px, 4vw, 36px); }
+  .eyebrow { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 4px 0 6px; text-wrap: balance; }
+  h2 { font-size: 17px; font-weight: 600; margin: 26px 0 6px; }
+  p, li { color: var(--text); max-width: 68ch; }
+  .muted { color: var(--text-muted); font-size: 13px; }
+  ul { padding-left: 22px; }
+  li + li { margin-top: 4px; }
+  a { color: var(--accent); }
+  footer { text-align: center; color: var(--text-muted); font-size: 12.5px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Estudio Contable Z&amp;V</div>
+  <h1>Política de privacidad</h1>
+  <p class="muted">Última actualización: 4 de octubre de 2026</p>
+
+  <h2>Qué es este sitio</h2>
+  <p>Este sitio reúne las herramientas internas del Estudio Contable Z&amp;V (gestión de cobranzas, VEP de monotributo y de autónomos, consulta de CUIT e informes mensuales). Su uso está limitado a los integrantes del estudio, que ingresan con la cuenta del estudio. No está abierto al público.</p>
+
+  <h2>Datos que se guardan</h2>
+  <p>Las herramientas guardan los datos administrativos que el estudio necesita para su trabajo con sus clientes: nombres, CUIT, correos de contacto, importes, honorarios, estados de envío y datos de facturación. Se guardan en una base de datos de Google Firebase a la que solo puede acceder la cuenta del estudio, y se usan únicamente para la gestión interna del estudio. No se venden, no se comparten con terceros y no se usan con fines publicitarios.</p>
+
+  <h2>Uso de Gmail</h2>
+  <p>Cuando un integrante del estudio lo pide, algunas herramientas se conectan con la cuenta de Gmail del estudio, con su autorización expresa, para:</p>
+  <ul>
+    <li>crear borradores de correo dirigidos a los clientes (por ejemplo, el aviso del VEP o de honorarios), que el estudio revisa y envía desde Gmail;</li>
+    <li>leer la firma configurada en la cuenta, para agregarla al final de esos borradores;</li>
+    <li>comprobar si un borrador creado por la herramienta ya fue enviado, para marcar al cliente como “Enviado”.</li>
+  </ul>
+  <p>Las herramientas no leen, guardan ni comparten los correos recibidos ni el resto del contenido de la cuenta. La autorización se puede revocar en cualquier momento desde <a href="https://myaccount.google.com/permissions" rel="noopener">la configuración de la cuenta de Google</a>.</p>
+  <p>El uso y la transferencia a cualquier otra aplicación de la información recibida de las API de Google se ajustan a la <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política de datos del usuario de los servicios de las API de Google</a>, incluidos los requisitos de uso limitado.</p>
+
+  <h2>Seguridad</h2>
+  <p>El acceso a los datos requiere iniciar sesión con la cuenta del estudio, la sesión se cierra automáticamente a las 2 horas y la base de datos se respalda semanalmente.</p>
+
+  <h2>Contacto</h2>
+  <p>Por consultas sobre esta política, escribí a <strong>info.cdrdba@gmail.com</strong>.</p>
+</main>
+<footer>Estudio Contable Z&amp;V · <a href="./">Ir al portal</a></footer>
+</body>
+</html>
