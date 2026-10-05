@@ -66,7 +66,8 @@
         cfg.db.ref(base() + "/" + id).remove().catch(() => {});
         return;
       }
-      vigentes.push({ id, cliente: e.cliente, nombre: e.nombre, eliminado: Number(e.eliminado), datos: Array.isArray(e.datos) ? e.datos : Object.values(e.datos || {}) });
+      const lista = v => Array.isArray(v) ? v : Object.values(v || {});
+      vigentes.push({ id, cliente: e.cliente, nombre: e.nombre, eliminado: Number(e.eliminado), datos: lista(e.datos), borrarAlRestaurar: lista(e.borrarAlRestaurar) });
     });
     entradas = vigentes.sort((a, b) => b.eliminado - a.eliminado);
     render();
@@ -80,6 +81,7 @@
       return;
     }
     const cambios = {};
+    e.borrarAlRestaurar.forEach(r => { if (r) cambios[r] = null; });
     e.datos.forEach(d => { if (d && d.ruta) cambios[d.ruta] = d.valor; });
     cambios[base() + "/" + id] = null;
     btn.disabled = true;
@@ -124,14 +126,18 @@
 
     // Guarda en la papelera una copia de lo que hay en la nube en cada ruta (relativa a la
     // carpeta de la herramienta). Devuelve una promesa que falla si no se pudo guardar.
-    async enviar({ cliente, nombre, rutas }) {
+    // borrarAlRestaurar: rutas que se borran al restaurar (p. ej. la marca de cliente de la lista
+    // inicial eliminado, que la herramienta escribe después de guardar la copia).
+    async enviar({ cliente, nombre, rutas, borrarAlRestaurar }) {
       if (!cfg) throw new Error("Papelera no iniciada");
       const completas = [...new Set(rutas.map(ruta))];
       const fotos = await conTiempoLimite(Promise.all(completas.map(r => cfg.db.ref(r).get())), 20000);
       const datos = [];
       fotos.forEach((s, i) => { if (s.exists()) datos.push({ ruta: completas[i], valor: s.val() }); });
+      const entrada = { cliente, nombre: nombre || cliente, eliminado: Date.now(), datos };
+      if (borrarAlRestaurar && borrarAlRestaurar.length) entrada.borrarAlRestaurar = borrarAlRestaurar.map(ruta);
       const ref = cfg.db.ref(base()).push();
-      await conTiempoLimite(ref.set({ cliente, nombre: nombre || cliente, eliminado: Date.now(), datos }), 20000);
+      await conTiempoLimite(ref.set(entrada), 20000);
     }
   };
 })();

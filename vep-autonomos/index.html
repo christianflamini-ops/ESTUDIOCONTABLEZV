@@ -1,6 +1,6 @@
 <!doctype html>
 <title>VEP AUTONOMOS MENSUAL</title>
-<meta name="zv-version" content="20261004-2009">
+<meta name="zv-version" content="20261005-1847">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -368,8 +368,8 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261004-2009">
-<script src="../papelera.js?v=20261004-2009"></script>
+<link rel="stylesheet" href="../comun.css?v=20261005-1847">
+<script src="../papelera.js?v=20261005-1847"></script>
 
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
@@ -513,6 +513,11 @@ function recibirClientesBase(val) {
   try { localStorage.setItem(CLIENTES_BASE_KEY, JSON.stringify(CLIENTES)); } catch (e) {}
   clientesBaseListos = true;
 }
+// Clientes de la lista inicial que se eliminaron (están en la papelera): autonomosVep/clientesEliminados/<clave>.
+// La lista inicial no se modifica; esos clientes se ocultan en allClientes().
+const ELIMINADOS_KEY = "zv_clientesEliminados_vepAutonomos";
+let clientesEliminados = (() => { try { return JSON.parse(localStorage.getItem(ELIMINADOS_KEY)) || {}; } catch (e) { return {}; } })();
+function guardarEliminados() { try { localStorage.setItem(ELIMINADOS_KEY, JSON.stringify(clientesEliminados)); } catch (e) {} }
 
 // --- Borradores de Gmail (Google Identity Services + Gmail API) ---
 const GOOGLE_CLIENT_ID = "689249858006-8va2gvtonuf2b8rfelt9pob2qon3ta9t.apps.googleusercontent.com";
@@ -623,7 +628,7 @@ function saveRoster(r) {
   fbWrite("roster", obj);
 }
 function baseClientes() { return rosterBase.length ? rosterBase : CLIENTES; }
-function allClientes() { return baseClientes().concat(customClientes); }
+function allClientes() { return baseClientes().filter(c => !clientesEliminados[fbKey(c.cliente)]).concat(customClientes); }
 
 // Resumen en texto natural para pegarle a Claude y que agregue la fila en
 // "VEP AUTONOMOS MENSUAL.xlsx" (el artifact no puede editar el Excel directamente).
@@ -654,7 +659,7 @@ function addCustomClient(data) {
   return true;
 }
 
-// Rutas de la nube con datos del cliente. Las usan la papelera (copia antes de borrar) y deleteCustomClient.
+// Rutas de la nube con datos del cliente. Las usan la papelera (copia antes de borrar) y deleteClient.
 function rutasDeCliente(cliente) {
   const k = fbKey(cliente);
   const rutas = [`customClientes/${k}`, `nameOverrides/${k}`, `periodosOverrides/${k}`];
@@ -666,21 +671,30 @@ function rutasDeCliente(cliente) {
 }
 
 // Primero guarda la copia en la papelera (../papelera.js); si no se pudo, no borra nada.
+// Un cliente de la lista inicial además queda marcado en clientesEliminados (la marca se quita al restaurar).
 async function enviarAPapelera(cliente) {
   const c = allClientes().find(x => x.cliente === cliente);
+  const k = fbKey(cliente);
+  const esBase = !customClientes.some(x => x.cliente === cliente);
   try {
-    await zvPapelera.enviar({cliente, nombre: c ? displayName(c) : cliente, rutas: rutasDeCliente(cliente)});
+    await zvPapelera.enviar({cliente, nombre: c ? displayName(c) : cliente, rutas: rutasDeCliente(cliente),
+      borrarAlRestaurar: esBase ? [`clientesEliminados/${k}`] : []});
   } catch (e) {
     toast("No se pudo guardar en la papelera, así que el cliente no se eliminó. Revisá la conexión.", true);
     return false;
   }
-  deleteCustomClient(cliente);
+  if (esBase) {
+    clientesEliminados[k] = {cliente, fecha: new Date().toISOString()};
+    guardarEliminados();
+    fbWrite(`clientesEliminados/${k}`, clientesEliminados[k]);
+  }
+  deleteClient(cliente);
   renderAll();
   toast("Cliente enviado a la papelera");
   return true;
 }
 
-function deleteCustomClient(cliente) {
+function deleteClient(cliente) {
   rutasDeCliente(cliente).forEach(fbRemove);
   customClientes = customClientes.filter(c => c.cliente !== cliente);
   saveCustomClientes(customClientes);
@@ -804,6 +818,12 @@ function attachFbListeners() {
     recibirClientesBase(snap.val());
     if (!cloudSyncReady) { if (estadoNubeListo) revealAppAfterSync(); }
     else safeRerender();
+  });
+
+  fbDb.ref(`${FB_NS}/clientesEliminados`).on("value", snap => {
+    clientesEliminados = snap.val() || {};
+    guardarEliminados();
+    safeRerender();
   });
 
   fbDb.ref(`${FB_NS}/vtos`).on("value", snap => {
@@ -1179,7 +1199,7 @@ function cardHtml(c) {
         <button class="envio-btn ${cs.envio === "Pendiente" ? "active" : ""}" data-v="Pendiente" data-cliente="${escAttr(c.cliente)}">Pendiente</button>
         <button class="envio-btn ${cs.envio === "Enviado" ? "active" : ""}" data-v="Enviado" data-cliente="${escAttr(c.cliente)}">Enviado</button>
       </div>
-      ${c.custom ? `<div class="actions"><button class="btn" data-role="delete-custom" data-cliente="${escAttr(c.cliente)}">Eliminar cliente</button></div>` : ""}`;
+      <div class="actions"><button class="btn" data-role="delete-custom" data-cliente="${escAttr(c.cliente)}">Eliminar cliente</button></div>`;
 
   let body;
   if (c.medio === "Correo" && c.email && !cs.monto) {
@@ -1640,6 +1660,9 @@ function aplicarImportacion() {
     delete datos.cliente;
     if (r.cuit in posBase) {
       Object.assign(base[posBase[r.cuit]], datos);
+      // Si estaba eliminado (en la papelera), el Excel lo vuelve a mostrar.
+      const k = fbKey(base[posBase[r.cuit]].cliente);
+      if (clientesEliminados[k]) { delete clientesEliminados[k]; guardarEliminados(); fbRemove(`clientesEliminados/${k}`); }
       actualizados++;
     } else if (customPorCuit[r.cuit]) {
       const cc = customPorCuit[r.cuit];
@@ -2162,9 +2185,9 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
 }
 </script>
 
-<script src="../sesion.js?v=20261004-2009"></script>
-<script src="../version.js?v=20261004-2009"></script>
-<script src="../resumen.js?v=20261004-2009"></script>
-<script src="../plantilla.js?v=20261004-2009"></script>
-<script src="../enter.js?v=20261004-2009"></script>
-<script src="../meses.js?v=20261004-2009"></script>
+<script src="../sesion.js?v=20261005-1847"></script>
+<script src="../version.js?v=20261005-1847"></script>
+<script src="../resumen.js?v=20261005-1847"></script>
+<script src="../plantilla.js?v=20261005-1847"></script>
+<script src="../enter.js?v=20261005-1847"></script>
+<script src="../meses.js?v=20261005-1847"></script>
