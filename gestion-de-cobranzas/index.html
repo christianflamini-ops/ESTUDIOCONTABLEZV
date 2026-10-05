@@ -1,6 +1,6 @@
 <!doctype html>
 <title>GESTIÓN DE COBRANZAS</title>
-<meta name="zv-version" content="20261005-1847">
+<meta name="zv-version" content="20261005-1904">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -974,8 +974,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261005-1847">
-<script src="../papelera.js?v=20261005-1847"></script>
+<link rel="stylesheet" href="../comun.css?v=20261005-1904">
+<script src="../errores.js?v=20261005-1904"></script>
+<script src="../registro.js?v=20261005-1904"></script>
+<script src="../papelera.js?v=20261005-1904"></script>
 
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
@@ -1132,6 +1134,8 @@ try {
 } catch (e) { fbEnabled = false; }
 
 function fbKey(name) { return String(name).replace(/[.#$\[\]\/]/g, "_"); }
+// Registro de cambios que muestra el portal (../registro.js).
+function registrar(accion, cliente, detalle) { if (window.zvRegistro) zvRegistro.anotar(accion, cliente, detalle); }
 function fbWrite(path, value) {
   if (!fbEnabled) return;
   try { fbDb.ref(path).set(value); } catch (e) {}
@@ -1547,6 +1551,7 @@ function render() {
       deudaInput.addEventListener("input", markDirty);
       saveHonorariosBtn.addEventListener("click", () => {
         setRec(c.cliente, {monto: montoInput.value, deuda: deudaInput.value});
+        registrar("Cargó honorarios", displayName(c), `${monthKeyDisplay(activeMonthKey())}: $${montoInput.value || 0}` + (deudaInput.value ? ` · deuda $${deudaInput.value}` : ""));
         saveHonorariosBtn.disabled = true;
         unsavedHonorariosClient = null;
         renderPreviewSlot();
@@ -1581,8 +1586,10 @@ function render() {
       body.querySelectorAll(".estado-btn").forEach(btn => {
         if (rec.estado === btn.dataset.v) btn.classList.add("active");
         btn.addEventListener("click", () => {
-          const newVal = rec.estado === btn.dataset.v ? "" : btn.dataset.v;
+          const antes = rec.estado;
+          const newVal = antes === btn.dataset.v ? "" : btn.dataset.v;
           setRec(c.cliente, {estado: newVal});
+          registrar(newVal ? `Marcó como ${newVal}` : `Quitó la marca ${antes}`, displayName(c), monthKeyDisplay(activeMonthKey()));
           render();
         });
       });
@@ -1906,6 +1913,7 @@ function renderAddForm() {
     customClientes.push(nuevoCliente);
     saveCustomClientes(customClientes);
     fbWrite(`customClientes/${fbKey(nombreFinal)}`, nuevoCliente);
+    registrar("Agregó el cliente", nombreFinal);
     const descVal = document.getElementById("nc-desc").value.trim();
     if (descVal) {
       descriptions[nombreFinal] = descVal;
@@ -2342,6 +2350,7 @@ async function importExcelFile(file) {
     msg += `\nNo se borra nada. Los cambios se sincronizan con todo el equipo. ¿Continuar?`;
     if (!confirm(msg)) return;
     applyImportPlan(plan);
+    registrar("Importó un Excel", "", `${file.name}: ${plan.clientesActualizados} clientes actualizados, ${plan.newClients.length} nuevos, ${plan.recsNuevos + plan.recsActualizados} honorarios`);
     toast("Excel importado");
   } catch (e) {
     toast("No se pudo leer el archivo: " + (e && e.message ? e.message : "error desconocido"), true);
@@ -2690,6 +2699,7 @@ async function syncDraftsToGmail() {
         console.error("Error creando borrador para " + c.cliente, e);
       }
     }
+    if (ok) registrar("Creó borradores en Gmail", "", `${monthKeyDisplay(activeMonthKey())}: ${ok} ${ok === 1 ? "borrador" : "borradores"}`);
     toast(`Borradores creados: ${ok}` + (fail ? ` · Errores: ${fail}` : ""), fail > 0 && ok === 0);
   } catch (e) {
     toast("No se pudo conectar con Gmail: " + e.message, true);
@@ -2747,6 +2757,7 @@ async function checkSentDrafts() {
     let msg = `Marcados como enviados: ${enviados}`;
     if (pendientes) msg += ` · Todavía como borrador: ${pendientes}`;
     if (errores) msg += ` · Errores: ${errores}`;
+    if (enviados) registrar("Verificó enviados en Gmail", "", `${monthKeyDisplay(activeMonthKey())}: ${enviados} marcados como Enviado`);
     toast(msg, errores > 0 && enviados === 0);
   } catch (e) {
     toast("No se pudo conectar con Gmail: " + e.message, true);
@@ -2984,9 +2995,9 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
 }
 </script>
 
-<script src="../sesion.js?v=20261005-1847"></script>
-<script src="../version.js?v=20261005-1847"></script>
-<script src="../resumen.js?v=20261005-1847"></script>
-<script src="../plantilla.js?v=20261005-1847"></script>
-<script src="../enter.js?v=20261005-1847"></script>
-<script src="../meses.js?v=20261005-1847"></script>
+<script src="../sesion.js?v=20261005-1904"></script>
+<script src="../version.js?v=20261005-1904"></script>
+<script src="../resumen.js?v=20261005-1904"></script>
+<script src="../plantilla.js?v=20261005-1904"></script>
+<script src="../enter.js?v=20261005-1904"></script>
+<script src="../meses.js?v=20261005-1904"></script>

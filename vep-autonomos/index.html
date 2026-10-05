@@ -1,6 +1,6 @@
 <!doctype html>
 <title>VEP AUTONOMOS MENSUAL</title>
-<meta name="zv-version" content="20261005-1847">
+<meta name="zv-version" content="20261005-1904">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -368,8 +368,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261005-1847">
-<script src="../papelera.js?v=20261005-1847"></script>
+<link rel="stylesheet" href="../comun.css?v=20261005-1904">
+<script src="../errores.js?v=20261005-1904"></script>
+<script src="../registro.js?v=20261005-1904"></script>
+<script src="../papelera.js?v=20261005-1904"></script>
 
 
 <div id="syncOverlay" class="sync-overlay" style="display:none;">
@@ -546,6 +548,10 @@ try {
 
 const FB_NS = "autonomosVep";
 function fbKey(name) { return String(name).replace(/[.#$\[\]\/]/g, "_"); }
+// Registro de cambios que muestra el portal (../registro.js). Anota el mes elegido y el nombre visible del cliente.
+function registrar(accion, cliente, detalle) { if (window.zvRegistro) zvRegistro.anotar(accion, cliente, detalle); }
+const mesRegistro = () => activeMonthKey().split("-").reverse().join("/");
+function nombreRegistro(cliente) { const c = allClientes().find(x => x.cliente === cliente); return c ? displayName(c) : cliente; }
 function fbWrite(path, value) {
   if (!fbEnabled) return;
   try { fbDb.ref(`${FB_NS}/${path}`).set(value); } catch (e) {}
@@ -766,6 +772,7 @@ function renderAddForm() {
       situacion: document.getElementById("newSituacion").value
     });
     if (ok) {
+      registrar("Agregó el cliente", document.getElementById("newCliente").value.trim().toUpperCase());
       showAddForm = false;
       document.getElementById("toggleAdd").classList.remove("active");
       renderAddForm();
@@ -1375,6 +1382,7 @@ function wireListEvents() {
       setClientState(cliente, {monto});
       const periodos = card.querySelector('[data-role="periodos"]');
       if (periodos) setPeriodosAdeudados(cliente, periodos.value);
+      registrar("Cargó el monto del VEP", nombreRegistro(cliente), `${mesRegistro()}: $${monto || 0}` + (periodos && periodos.value ? ` · adeuda: ${periodos.value}` : ""));
       openCard = cliente;
       renderStats();
       renderList();
@@ -1384,7 +1392,9 @@ function wireListEvents() {
   document.querySelectorAll(".envio-btn").forEach(el => {
     el.addEventListener("click", e => {
       e.stopPropagation();
+      const antes = getClientState(el.dataset.cliente).envio;
       setClientState(el.dataset.cliente, {envio: el.dataset.v});
+      if (antes !== el.dataset.v) registrar(`Marcó como ${el.dataset.v}`, nombreRegistro(el.dataset.cliente), mesRegistro());
       renderStats();
       renderList();
       openCard = el.dataset.cliente;
@@ -1714,6 +1724,7 @@ function aplicarImportacion() {
   }
 
   const resumen = `Excel importado: ${actualizados} clientes actualizados` + (nuevos ? `, ${nuevos} nuevos` : "");
+  registrar("Importó un Excel", "", (imp.nombreArchivo ? imp.nombreArchivo + ": " : "") + resumen.replace("Excel importado: ", ""));
   importPendiente = null;
   renderImportPreview();
   renderAll();
@@ -1876,6 +1887,7 @@ document.getElementById("saveVtosBtn").addEventListener("click", () => {
     document.querySelectorAll("#sortFilters button").forEach(b => b.classList.toggle("active", b.dataset.s === "vencimiento"));
   }
   renderList();
+  registrar("Guardó los vencimientos del período", "", `${mesRegistro()}: ` + ["A", "B", "C"].map(g => (getVtoGrupo(g) || "—").split("-").reverse().join("/")).join(" · "));
   if (completos) toast("Vencimientos guardados — clientes ordenados por vencimiento");
   else toast("Faltan vencimientos: cargá las 3 fechas para ver los clientes", true);
 });
@@ -2020,6 +2032,7 @@ async function syncDraftsToGmail() {
         console.error("Error creando borrador para " + c.cliente, e);
       }
     }
+    if (ok) registrar("Creó borradores en Gmail", "", `${mesRegistro()}: ${ok} ${ok === 1 ? "borrador" : "borradores"}`);
     toast(`Borradores creados: ${ok}` + (fail ? ` · Errores: ${fail}` : ""), fail > 0 && ok === 0);
   } catch (e) {
     toast("No se pudo conectar con Gmail: " + e.message, true);
@@ -2076,6 +2089,7 @@ async function checkSentDrafts() {
     let msg = `Marcados como enviados: ${enviados}`;
     if (pendientes) msg += ` · Todavía como borrador: ${pendientes}`;
     if (errores) msg += ` · Errores: ${errores}`;
+    if (enviados) registrar("Verificó enviados en Gmail", "", `${mesRegistro()}: ${enviados} marcados como Enviado`);
     toast(msg, errores > 0 && enviados === 0);
   } catch (e) {
     toast("No se pudo conectar con Gmail: " + e.message, true);
@@ -2185,9 +2199,9 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
 }
 </script>
 
-<script src="../sesion.js?v=20261005-1847"></script>
-<script src="../version.js?v=20261005-1847"></script>
-<script src="../resumen.js?v=20261005-1847"></script>
-<script src="../plantilla.js?v=20261005-1847"></script>
-<script src="../enter.js?v=20261005-1847"></script>
-<script src="../meses.js?v=20261005-1847"></script>
+<script src="../sesion.js?v=20261005-1904"></script>
+<script src="../version.js?v=20261005-1904"></script>
+<script src="../resumen.js?v=20261005-1904"></script>
+<script src="../plantilla.js?v=20261005-1904"></script>
+<script src="../enter.js?v=20261005-1904"></script>
+<script src="../meses.js?v=20261005-1904"></script>

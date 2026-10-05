@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ESTUDIO CONTABLE Z&amp;V</title>
-<meta name="zv-version" content="20261005-1847">
+<meta name="zv-version" content="20261005-1904">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -148,11 +148,33 @@
   .chip.warn { background: var(--pending-tint); color: var(--pending); }
   .chip.danger { background: var(--danger-tint); color: var(--danger); }
   .status-note { font-size: 11.5px; color: var(--text-muted); }
+  .tabla-respaldo { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .tabla-respaldo th, .tabla-respaldo td { text-align: left; padding: 5px 8px 5px 0; border-bottom: 1px solid var(--surface-sunken); }
+  .tabla-respaldo th { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+  .tabla-respaldo td.num, .tabla-respaldo th.num { text-align: right; }
+  .tabla-respaldo .dif { color: var(--pending); font-weight: 600; }
+  .como-restaurar summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+  .como-restaurar ol { margin: 8px 0 0; padding-left: 20px; font-size: 12.5px; color: var(--text-muted); line-height: 1.55; }
   .export-line { display: flex; }
 
   /* Aviso general arriba de las herramientas (vencimiento del certificado de ARCA) */
   .portal-alert { border-radius: 12px; padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center; margin: -8px 0 8px; background: var(--pending-tint); color: var(--pending); }
   .portal-alert.danger { background: var(--danger-tint); color: var(--danger); }
+  .registro-filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+  .registro-filtros select, .registro-filtros input {
+    font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); min-width: 0; flex: 1 1 160px;
+  }
+  .registro-lista { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; }
+  .registro-lista li { padding: 8px 0; border-top: 1px solid var(--surface-sunken); font-size: 13px; overflow-wrap: anywhere; }
+  .registro-lista .reg-linea b { font-weight: 600; }
+  .registro-lista .reg-meta { font-size: 11.5px; color: var(--text-muted); }
+  .errores-alert { text-align: left; }
+  .errores-alert summary { cursor: pointer; text-align: center; }
+  .errores-cuerpo { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; font-weight: 400; color: var(--text); }
+  .errores-lista { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+  .errores-lista li { padding: 8px 0; border-top: 1px solid var(--border); font-size: 12.5px; overflow-wrap: anywhere; }
+  .errores-lista .cuando { color: var(--text-muted); font-size: 11.5px; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
   .btn {
@@ -177,7 +199,9 @@
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .sync-progress-bar { animation: none; width: 100%; } }
 </style>
-<link rel="stylesheet" href="comun.css?v=20261005-1847">
+<link rel="stylesheet" href="comun.css?v=20261005-1904">
+<script src="errores.js?v=20261005-1904"></script>
+<script src="registro.js?v=20261005-1904"></script>
 </head>
 <body>
 
@@ -238,6 +262,17 @@
   </header>
 
   <div class="portal-alert" id="certAlert" hidden></div>
+  <details class="portal-alert errores-alert" id="erroresAlert" hidden>
+    <summary id="erroresResumen"></summary>
+    <div class="errores-cuerpo">
+      <ul class="errores-lista" id="erroresLista"></ul>
+      <div class="actions">
+        <button class="btn" id="erroresCopiar" type="button">Copiar el detalle</button>
+        <button class="btn" id="erroresRevisados" type="button">Marcar como revisados</button>
+      </div>
+      <div class="status-note">Pasale el detalle a Claude para que revise qué pasó. "Marcar como revisados" los borra de esta lista.</div>
+    </div>
+  </details>
 
   <main id="tools"></main>
 
@@ -253,7 +288,23 @@
       <div class="actions">
         <button class="btn primary" id="descargarRespaldo" type="button" disabled>Descargar último respaldo</button>
         <button class="btn" id="respaldoAhora" type="button">Hacer respaldo ahora</button>
+        <button class="btn" id="comprobarRespaldo" type="button" disabled>Comprobar respaldo</button>
       </div>
+      <div class="status" id="st-comprobacion" style="display:none"></div>
+    </article>
+  </section>
+
+  <section aria-label="Registro de cambios">
+    <div class="section-title"><strong>REGISTRO DE CAMBIOS</strong></div>
+    <article class="card">
+      <p class="desc">Quién hizo cada cambio en las herramientas y cuándo: importes cargados, envíos marcados, clientes agregados, eliminados o restaurados, Excel importados y borradores de Gmail. Se guardan los últimos 90 días.</p>
+      <div class="registro-filtros">
+        <select id="regHerramienta" aria-label="Herramienta"><option value="">Todas las herramientas</option></select>
+        <select id="regQuien" aria-label="Persona"><option value="">Todas las personas</option></select>
+        <input id="regBuscar" type="search" placeholder="Buscar cliente o acción…" aria-label="Buscar en el registro">
+      </div>
+      <ul class="registro-lista" id="regLista"><li class="status-note">Cargando…</li></ul>
+      <div class="actions"><button class="btn" id="regMas" type="button" hidden>Mostrar más</button></div>
     </article>
   </section>
 
@@ -589,13 +640,20 @@ if (typeof firebase === "undefined") {
     }
     if (intento && !intento.ok) html += `<div class="chips"><span class="chip danger">El último intento falló</span></div><div class="status-note">${esc(intento.error || "")}</div>`;
     if (!respaldos.configurado) html += `<div class="status-note">El respaldo automático todavía no está configurado en el servidor.</div>`;
+    if (respaldos.comprobado) {
+      const c = respaldos.comprobado;
+      const [ca, cm, cd] = String(c.respaldo || "").split("-");
+      html += `<div class="status-title">Última comprobación</div><div class="chips"><span class="chip ${c.ok ? "ok" : "danger"}">${c.ok ? "Se puede restaurar" : "Con problemas"}</span><span class="chip">copia del ${cd}/${cm}/${ca} · comprobada el ${esc(new Date(c.hecho).toLocaleDateString("es-AR"))}</span></div>`;
+    }
     el.innerHTML = html;
     boton.disabled = !lista.length;
+    $("comprobarRespaldo").disabled = !lista.length;
   }
 
   async function cargarRespaldos() {
     try { respaldos = await (await pedirRespaldos("/respaldos")).json(); }
     catch (e) { respaldos = { error: e.message }; }
+    try { if (!respaldos.error) respaldos.comprobado = (await firebase.database().ref("respaldoComprobado").get()).val(); } catch (e) {}
     renderRespaldo();
   }
 
@@ -626,6 +684,186 @@ if (typeof firebase === "undefined") {
     finally { boton.disabled = false; boton.textContent = "Hacer respaldo ahora"; renderRespaldo(); }
   });
 
+  // --- Simulacro de restauración: descarga la última copia, revisa que Firebase la pueda volver a
+  // cargar (JSON válido, claves permitidas, todas las secciones) y la compara con los datos de hoy.
+  // Solo lee: no modifica la base, salvo la marca respaldoComprobado con el resultado. ---
+  const SECCIONES_RESPALDO = [
+    ["Cobranzas", d => contarClientes(d, d.clientesBase && d.clientesBase.cobranzas, d.customClientes, d.clientesEliminados)],
+    ["VEP Monotributo", d => { const n = d.monotributoVep || {}; return contarClientes(d, d.clientesBase && d.clientesBase.vepMonotributo, n.customClientes, n.clientesEliminados); }],
+    ["VEP Autónomos", d => { const n = d.autonomosVep || {}; return contarClientes(d, n.roster || (d.clientesBase && d.clientesBase.vepAutonomos), n.customClientes, n.clientesEliminados); }],
+    ["Informe Mensual", d => Object.keys((d.informeMonotributo && d.informeMonotributo.clientes) || {}).length],
+    ["Consulta de CUITs (CUITs consultados)", d => Object.keys((d.consultaCuits && d.consultaCuits.cuits) || {}).length],
+    ["Papelera (clientes eliminados)", d => Object.values(d.papelera || {}).reduce((s, h) => s + Object.keys(h || {}).length, 0)],
+  ];
+  const claveFirebase = k => (k === "" ? "" : String(k).replace(/[.#$\[\]\/]/g, "_"));
+  function contarClientes(d, base, custom, eliminados) {
+    const lista = Array.isArray(base) ? base.filter(Boolean) : Object.values(base || {});
+    const ocultos = eliminados || {};
+    return lista.filter(c => c && !ocultos[claveFirebase(c.cliente)]).length + Object.keys(custom || {}).length;
+  }
+  // Claves que Firebase no acepta al importar un JSON.
+  function clavesInvalidas(nodo, ruta, malas) {
+    if (!nodo || typeof nodo !== "object") return malas;
+    for (const k of Object.keys(nodo)) {
+      if (malas.length >= 5) break;
+      if (!k || /[.#$\[\]\/\u0000-\u001f\u007f]/.test(k) || new TextEncoder().encode(k).length > 768) malas.push(ruta + "/" + k);
+      else clavesInvalidas(nodo[k], ruta + "/" + k, malas);
+    }
+    return malas;
+  }
+
+  $("comprobarRespaldo").addEventListener("click", async () => {
+    const lista = (respaldos && respaldos.respaldos) || [];
+    if (!lista.length) return;
+    const boton = $("comprobarRespaldo");
+    const el = $("st-comprobacion");
+    boton.disabled = true; boton.textContent = "Comprobando…";
+    el.style.display = ""; el.innerHTML = `<span class="status-note">Descargando la copia del ${esc(lista[0].fecha.split("-").reverse().join("/"))} y comparándola con los datos de hoy…</span>`;
+    const problemas = [], avisos = [];
+    try {
+      const texto = await (await pedirRespaldos("/respaldos/descargar?fecha=" + encodeURIComponent(lista[0].fecha))).text();
+      let copia = null;
+      try { copia = JSON.parse(texto); } catch (e) { problemas.push("El archivo no es un JSON válido, así que Firebase no lo podría cargar."); }
+      const hoy = (await firebase.database().ref("/").get()).val() || {};
+      let filas = "";
+      if (copia) {
+        if (!copia || typeof copia !== "object" || !Object.keys(copia).length) problemas.push("La copia está vacía.");
+        const malas = clavesInvalidas(copia, "", []);
+        if (malas.length) problemas.push("Tiene nombres que Firebase no acepta al importar: " + malas.join(", "));
+        const faltan = Object.keys(hoy).filter(k => !(k in copia) && k !== "respaldoComprobado");
+        if (faltan.length) avisos.push("Secciones que hoy existen y no están en la copia: " + faltan.join(", ") + ". Puede ser normal si se crearon después del respaldo; hacé un respaldo nuevo y volvé a comprobar.");
+        filas = SECCIONES_RESPALDO.map(([nombre, contar]) => {
+          const a = contar(copia), b = contar(hoy);
+          return `<tr><td>${esc(nombre)}</td><td class="num">${a}</td><td class="num ${a !== b ? "dif" : ""}">${b}</td></tr>`;
+        }).join("");
+      }
+      const ok = !problemas.length;
+      const tam = texto.length < 1048576 ? Math.max(1, Math.round(texto.length / 1024)) + " KB" : (texto.length / 1048576).toFixed(1) + " MB";
+      el.innerHTML = `
+        <div class="status-title">Comprobación de la copia del ${esc(lista[0].fecha.split("-").reverse().join("/"))}</div>
+        <div class="chips"><span class="chip ${ok ? "ok" : "danger"}">${ok ? "Se puede restaurar" : "Con problemas"}</span><span class="chip">${tam}</span></div>
+        ${problemas.concat(avisos).map(p => `<div class="status-note">• ${esc(p)}</div>`).join("")}
+        ${filas ? `<table class="tabla-respaldo"><thead><tr><th>Datos</th><th class="num">En la copia</th><th class="num">Hoy</th></tr></thead><tbody>${filas}</tbody></table>
+        <div class="status-note">Las diferencias (en naranja) son normales si hubo cambios después del respaldo.</div>` : ""}
+        <details class="como-restaurar"><summary>¿Cómo se restaura?</summary><ol>
+          <li>Descargá la copia con <b>Descargar último respaldo</b> (o pedí una más vieja: se guardan 8).</li>
+          <li>Hacé antes un respaldo del estado actual con <b>Hacer respaldo ahora</b> y descargalo, por si hay que volver atrás.</li>
+          <li>En la consola de Firebase, abrí <b>Realtime Database</b>, tocá los tres puntos (⋮) arriba a la derecha y elegí <b>Importar JSON</b>.</li>
+          <li>Elegí el archivo descargado. Reemplaza <b>todos</b> los datos por los de la copia: lo cargado después de esa fecha se pierde.</li>
+        </ol></details>`;
+      await firebase.database().ref("respaldoComprobado").set({ ok, respaldo: lista[0].fecha, hecho: new Date().toISOString() });
+      respaldos.comprobado = { ok, respaldo: lista[0].fecha, hecho: new Date().toISOString() };
+      renderRespaldo();
+    } catch (e) {
+      el.innerHTML = `<div class="chips"><span class="chip danger">No se pudo comprobar</span></div><div class="status-note">${esc(e.message)}</div>`;
+    } finally {
+      boton.disabled = false; boton.textContent = "Comprobar respaldo";
+    }
+  });
+
+  // --- Errores anotados por errores.js en el portal y las herramientas (errores/<id>) ---
+  const DIAS_ERRORES = 7;          // el aviso cuenta los de la última semana
+  const DIAS_GUARDAR_ERRORES = 30; // los más viejos se borran solos
+  let errores = null;
+  const fechaHora = ms => { const f = new Date(ms), d = n => String(n).padStart(2, "0"); return `${d(f.getDate())}/${d(f.getMonth() + 1)}/${f.getFullYear()} ${d(f.getHours())}:${d(f.getMinutes())} h`; };
+
+  function renderErrores() {
+    const caja = $("erroresAlert");
+    if (!caja) return;
+    const desde = Date.now() - DIAS_ERRORES * 86400000;
+    const lista = Object.entries(errores || {}).map(([id, e]) => ({ id, ...e })).filter(e => e.fecha >= desde).sort((a, b) => b.fecha - a.fecha);
+    if (!lista.length) { caja.hidden = true; return; }
+    const porPagina = {};
+    lista.forEach(e => { porPagina[e.pagina] = (porPagina[e.pagina] || 0) + 1; });
+    $("erroresResumen").textContent = `Hubo ${lista.length} ${plural(lista.length, "error", "errores")} en los últimos ${DIAS_ERRORES} días: ` +
+      Object.entries(porPagina).map(([p, n]) => `${p} (${n})`).join(", ") + ". Tocá para ver el detalle.";
+    $("erroresLista").innerHTML = lista.slice(0, 30).map(e => `<li>
+      <div class="cuando">${esc(fechaHora(e.fecha))} · ${esc(e.pagina)}${e.quien ? " · " + esc(e.quien) : ""} · ${esc(e.navegador || "")}</div>
+      <div>${esc(e.mensaje)}</div></li>`).join("");
+    caja.hidden = false;
+  }
+
+  function textoErrores() {
+    const desde = Date.now() - DIAS_ERRORES * 86400000;
+    return Object.values(errores || {}).filter(e => e.fecha >= desde).sort((a, b) => b.fecha - a.fecha)
+      .map(e => `[${fechaHora(e.fecha)}] ${e.pagina}${e.quien ? " — " + e.quien : ""} — ${e.navegador || ""}\n${e.mensaje}${e.detalle ? "\n" + e.detalle : ""}`)
+      .join("\n\n");
+  }
+
+  $("erroresCopiar").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(textoErrores()); $("erroresCopiar").textContent = "¡Copiado!"; }
+    catch (e) { alert("No se pudo copiar. Seleccioná el texto de la lista y copialo a mano."); }
+    setTimeout(() => { $("erroresCopiar").textContent = "Copiar el detalle"; }, 2000);
+  });
+  $("erroresRevisados").addEventListener("click", () => {
+    if (!confirm("¿Marcar los errores como revisados? Se borran de esta lista.")) return;
+    firebase.database().ref("errores").remove().catch(e => alert("No se pudo: " + e.message));
+  });
+
+  function recibirErrores(val) {
+    errores = val || {};
+    const limite = Date.now() - DIAS_GUARDAR_ERRORES * 86400000;
+    const viejos = {};
+    Object.entries(errores).forEach(([id, e]) => { if (!e || !(e.fecha >= limite)) viejos[id] = null; });
+    if (Object.keys(viejos).length) firebase.database().ref("errores").update(viejos).catch(() => {});
+    renderErrores();
+  }
+
+  // --- Registro de cambios (registro/<id>, lo escribe registro.js desde las herramientas) ---
+  const DIAS_REGISTRO = 90;
+  const REGISTRO_A_LEER = 1000; // últimas anotaciones que se traen de la nube
+  let registro = null;
+  let registroMostrados = 100;
+
+  // Las claves de push de Firebase empiezan con la fecha codificada: sirve para pedir "todo lo anterior a…".
+  function claveDeTiempo(ms) {
+    const C = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+    let s = "";
+    for (let i = 0; i < 8; i++) { s = C.charAt(ms % 64) + s; ms = Math.floor(ms / 64); }
+    return s;
+  }
+  async function limpiarRegistroViejo() {
+    try {
+      const limite = Date.now() - DIAS_REGISTRO * 86400000;
+      const snap = await firebase.database().ref("registro").orderByKey().endAt(claveDeTiempo(limite)).limitToFirst(500).get();
+      const viejos = {};
+      Object.entries(snap.val() || {}).forEach(([id, e]) => { if (!e || !(e.fecha >= limite)) viejos[id] = null; });
+      if (Object.keys(viejos).length) await firebase.database().ref("registro").update(viejos);
+    } catch (e) {}
+  }
+
+  function opcionesFiltro(select, valores, todas) {
+    const actual = select.value;
+    select.innerHTML = `<option value="">${todas}</option>` + valores.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    select.value = valores.includes(actual) ? actual : "";
+  }
+
+  function renderRegistro() {
+    const ul = $("regLista");
+    if (!ul) return;
+    if (!registro) { ul.innerHTML = `<li class="status-note">Cargando…</li>`; $("regMas").hidden = true; return; }
+    const todas = Object.values(registro).filter(e => e && e.fecha).sort((a, b) => b.fecha - a.fecha);
+    const unicos = k => [...new Set(todas.map(e => e[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    opcionesFiltro($("regHerramienta"), unicos("herramienta"), "Todas las herramientas");
+    opcionesFiltro($("regQuien"), unicos("quien"), "Todas las personas");
+    const h = $("regHerramienta").value, q = $("regQuien").value;
+    const buscar = $("regBuscar").value.trim().toLowerCase();
+    const lista = todas.filter(e => (!h || e.herramienta === h) && (!q || e.quien === q) &&
+      (!buscar || [e.cliente, e.accion, e.detalle].some(x => String(x || "").toLowerCase().includes(buscar))));
+    if (!lista.length) {
+      ul.innerHTML = `<li class="status-note">${todas.length ? "Ningún cambio coincide con el filtro." : "Todavía no hay cambios registrados."}</li>`;
+      $("regMas").hidden = true;
+      return;
+    }
+    ul.innerHTML = lista.slice(0, registroMostrados).map(e => `<li>
+      <div class="reg-linea"><b>${esc(e.quien || "Sin nombre")}</b> · ${esc(e.accion)}${e.cliente ? ` · <b>${esc(e.cliente)}</b>` : ""}</div>
+      <div class="reg-meta">${esc(fechaHora(e.fecha))} · ${esc(e.herramienta || "")}${e.detalle ? " · " + esc(e.detalle) : ""}</div></li>`).join("");
+    $("regMas").hidden = lista.length <= registroMostrados;
+  }
+  ["regHerramienta", "regQuien"].forEach(id => $(id).addEventListener("change", () => { registroMostrados = 100; renderRegistro(); }));
+  $("regBuscar").addEventListener("input", () => { registroMostrados = 100; renderRegistro(); });
+  $("regMas").addEventListener("click", () => { registroMostrados += 100; renderRegistro(); });
+
   async function consultarCertificado() {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -653,13 +891,21 @@ if (typeof firebase === "undefined") {
     }, () => { cuitsDelMes = null; renderEstados(); });
     const exportRef = db.ref("exportacionesExcel");
     exportRef.on("value", snap => { exportaciones = snap.val() || {}; renderEstados(); }, () => { exportaciones = null; renderEstados(); });
-    statusRefs.push(resumenRef, cuitsRef, exportRef);
+    const erroresRef = db.ref("errores");
+    erroresRef.on("value", snap => recibirErrores(snap.val()), () => { errores = null; renderErrores(); });
+    const registroRef = db.ref("registro").limitToLast(REGISTRO_A_LEER);
+    registroRef.on("value", snap => { registro = snap.val() || {}; renderRegistro(); }, () => { registro = {}; renderRegistro(); });
+    limpiarRegistroViejo();
+    statusRefs.push(resumenRef, cuitsRef, exportRef, erroresRef, registroRef);
     consultarCertificado();
     cargarRespaldos();
   }
   function stopStatus() {
     statusRefs.splice(0).forEach(ref => ref.off());
     resumenes = {}; cuitsDelMes = null; certificado = null; exportaciones = null; respaldos = null;
+    const comprobacion = $("st-comprobacion"); if (comprobacion) { comprobacion.style.display = "none"; comprobacion.innerHTML = ""; }
+    errores = null; renderErrores();
+    registro = null; registroMostrados = 100; renderRegistro();
   }
   // Refresca los textos "Actualizado hace…" cada minuto.
   setInterval(() => { if (statusRefs.length) renderEstados(); }, 60000);
@@ -696,7 +942,7 @@ if (typeof firebase === "undefined") {
   });
 }
 </script>
-<script src="sesion.js?v=20261005-1847"></script>
-<script src="version.js?v=20261005-1847"></script>
+<script src="sesion.js?v=20261005-1904"></script>
+<script src="version.js?v=20261005-1904"></script>
 </body>
 </html>

@@ -88,6 +88,7 @@
     try {
       await conTiempoLimite(cfg.db.ref().update(cambios), 20000);
       cfg.toast(`${e.nombre || e.cliente} volvió a la lista, con todos sus datos`);
+      if (window.zvRegistro) zvRegistro.anotar("Restauró el cliente desde la papelera", e.nombre || e.cliente);
     } catch (err) {
       btn.disabled = false;
       cfg.toast("No se pudo restaurar. Revisá la conexión e intentá de nuevo.", true);
@@ -138,6 +139,7 @@
       if (borrarAlRestaurar && borrarAlRestaurar.length) entrada.borrarAlRestaurar = borrarAlRestaurar.map(ruta);
       const ref = cfg.db.ref(base()).push();
       await conTiempoLimite(ref.set(entrada), 20000);
+      if (window.zvRegistro) zvRegistro.anotar("Eliminó el cliente (fue a la papelera)", nombre || cliente);
     }
   };
 })();
