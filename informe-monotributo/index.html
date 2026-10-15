@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>INFORME MENSUAL MONOTRIBUTO</title>
-<meta name="zv-version" content="20261015-0934">
+<meta name="zv-version" content="20261015-0947">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -164,6 +164,19 @@
   table.carga .carga-cat { display: block; font-size: 11.5px; color: var(--text-muted); font-weight: 400; }
   table.carga .carga-ok { width: 86px; text-align: right; }
   table.carga thead th { position: sticky; top: 0; background: var(--surface-sunken); z-index: 1; }
+
+  /* Apartado PERIODO */
+  #periodoWrap .months-box { margin-top: 12px; max-height: 560px; overflow-y: auto; }
+  table.periodo tbody th { width: auto; }
+  table.periodo .carga-nombre { display: block; font-weight: 500; text-transform: uppercase; }
+  table.periodo .carga-cat { display: block; font-size: 11.5px; color: var(--text-muted); font-weight: 400; }
+  table.periodo thead th { position: sticky; top: 0; background: var(--surface-sunken); z-index: 1; }
+  table.periodo td.num { white-space: nowrap; vertical-align: top; }
+  table.periodo .en-curso { display: block; font-size: 11px; font-weight: 600; color: var(--pending); }
+  table.periodo td.num:last-child .en-curso { display: inline; }
+  table.periodo tfoot th, table.periodo tfoot td { font-weight: 700; }
+  table.periodo .supera { display: block; font-size: 11px; font-weight: 600; color: var(--danger); }
+  table.periodo .sin-dato { color: var(--text-muted); font-size: 12px; }
 
   .stats {
     display: grid;
@@ -490,6 +503,9 @@
   }
   .form-grid textarea { resize: vertical; min-height: 70px; font-size: 13px; line-height: 1.5; }
   .form-grid small { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .fecha-control { display: flex; align-items: center; gap: 12px; }
+  .fecha-control input { flex: 1; min-width: 0; }
+  .fecha-control .link-btn { flex: none; font-size: 13px; }
 
   /* Selector de dos opciones (igual a Pendiente / Enviado de Cobranzas) */
   .estado-row { display: flex; gap: 8px; margin: 0 0 10px; }
@@ -756,10 +772,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261015-0934">
-<script src="../errores.js?v=20261015-0934"></script>
-<script src="../registro.js?v=20261015-0934"></script>
-<script src="../papelera.js?v=20261015-0934"></script>
+<link rel="stylesheet" href="../comun.css?v=20261015-0947">
+<script src="../errores.js?v=20261015-0947"></script>
+<script src="../registro.js?v=20261015-0947"></script>
+<script src="../papelera.js?v=20261015-0947"></script>
 </head>
 <body>
 
@@ -829,6 +845,7 @@
     </div>
     <button class="btn" data-act="nuevo" id="toggleAgregar">+ Agregar cliente</button>
     <button class="btn" data-act="carga" id="toggleCarga">Carga mensual</button>
+    <button class="btn" data-act="ver-periodo" id="togglePeriodo">Período</button>
     <button class="btn azul" data-act="escalas" id="toggleEscalas">Escalas</button>
   </div>
   <div class="toolbar">
@@ -838,6 +855,7 @@
   <div id="recatWrap"></div>
   <div id="agregarWrap"></div>
   <div id="cargaWrap"></div>
+  <div id="periodoWrap"></div>
   <div id="escalasWrap"></div>
 
   <div class="list" id="list"></div>
@@ -1055,6 +1073,17 @@ function fijarValor(obj, tipo, y, m, v) {
   obj.datos[y][tipo][m] = v;
 }
 const aniosConDatos = obj => Object.keys(obj.datos || {}).map(Number).sort((a, b) => a - b);
+
+// Meses en curso: la facturación y los gastos de los meses que todavía no corresponde cargar
+// (posteriores al mes inmediato anterior) que vienen en el Excel importado. Se guardan aparte,
+// en c.enCurso (misma forma que c.datos), y solo se usan en el apartado PERIODO y al exportar:
+// la carga mensual, los indicadores, la recategorización y el informe usan únicamente c.datos.
+function valorEnCurso(obj, tipo, y, m) {
+  const v = obj.enCurso && obj.enCurso[y] && obj.enCurso[y][tipo] ? obj.enCurso[y][tipo][m] : null;
+  return v == null ? null : v;
+}
+// Valor de un mes para el apartado PERIODO y el Excel: el cargado o, si no hay, el del mes en curso.
+const valorPeriodo = (obj, tipo, y, m) => valor(obj, tipo, y, m) ?? valorEnCurso(obj, tipo, y, m);
 
 // ---------- Períodos de análisis ----------
 // ENE-DIC (enero a diciembre de un año): se usa de septiembre a febrero inclusive.
@@ -1294,7 +1323,8 @@ function leerHojaEscala(ws) {
 // (p. ej. "INFORME MENSUAL MONOTRIBUTO 2026") se usa ese; si no, se pregunta con pedirAnio().
 // Los años que no vienen en el archivo se conservan de los datos anteriores.
 // Solo se carga hasta el mes inmediato anterior (en octubre, hasta septiembre inclusive): los
-// valores del archivo de meses posteriores a `limite` se descartan y se informan en el resumen.
+// valores del archivo de meses posteriores a `limite` no se cargan como datos del mes; se guardan
+// como meses en curso (c.enCurso), que solo usa el apartado PERIODO, y se informan en el resumen.
 function importarLibro(arrayBuffer, prev, fileName, pedirAnio, limite = mesACargar()) {
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
   const hojaEscala = wb.SheetNames.find(n => norm(n).includes('ESCALA'));
@@ -1326,11 +1356,17 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio, limite = mesACarg
   }
   const clients = [...porClave.values()];
   let futuros = 0;
+  const vacios = () => Array(12).fill(null);
   for (const c of clients) {
     for (const [anio, d] of Object.entries(c.datos || {})) {
       for (const tipo of ['ingresos', 'gastos']) {
         (d[tipo] || []).forEach((v, m) => {
-          if (v != null && claveMes({ y: Number(anio), m }) > claveMes(limite)) { d[tipo][m] = null; futuros++; }
+          if (v == null || claveMes({ y: Number(anio), m }) <= claveMes(limite)) return;
+          c.enCurso = c.enCurso || {};
+          c.enCurso[anio] = c.enCurso[anio] || { ingresos: vacios(), gastos: vacios() };
+          c.enCurso[anio][tipo][m] = v;
+          d[tipo][m] = null;
+          futuros++;
         });
       }
     }
@@ -1349,7 +1385,6 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio, limite = mesACarg
     porNombre.set(claveNombre(c), i);
   };
   resultado.forEach(indexar);
-  const vacios = () => Array(12).fill(null);
   let actualizados = 0, nuevos = 0;
   for (const c of clients) {
     const bajaExcel = c.bajaExcel;
@@ -1369,12 +1404,15 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio, limite = mesACarg
     if (bajaExcel === true || bajaExcel === false) p.baja = bajaExcel; // columna ESTADO (ALTA/BAJA)
     else if (c.baja) p.baja = true;
     else if (c.categoria) p.baja = false;
-    for (const [anio, d] of Object.entries(c.datos || {})) {
-      const ant = p.datos[anio] || { ingresos: vacios(), gastos: vacios() };
-      p.datos[anio] = {
-        ingresos: (ant.ingresos || vacios()).map((v, m) => d.ingresos[m] ?? v),
-        gastos: (ant.gastos || vacios()).map((v, m) => d.gastos[m] ?? v),
-      };
+    for (const campo of ['datos', 'enCurso']) {
+      for (const [anio, d] of Object.entries(c[campo] || {})) {
+        p[campo] = p[campo] ? { ...p[campo] } : {};
+        const ant = p[campo][anio] || { ingresos: vacios(), gastos: vacios() };
+        p[campo][anio] = {
+          ingresos: (ant.ingresos || vacios()).map((v, m) => d.ingresos[m] ?? v),
+          gastos: (ant.gastos || vacios()).map((v, m) => d.gastos[m] ?? v),
+        };
+      }
     }
     delete p.nuevo; // ya figura en el Excel
     if (k.startsWith('cuit:')) porCuit.set(k, pos);
@@ -1411,7 +1449,7 @@ function colLetra(i) {
 
 // Una hoja por año con el mismo formato del Excel original, más la hoja de escalas.
 function exportarLibro(state, nombreArchivo = 'INFORME MENSUAL MONOTRIBUTO.xlsx') {
-  const anios = [...new Set(state.clients.flatMap(aniosConDatos))].sort((a, b) => a - b);
+  const anios = [...new Set(state.clients.flatMap(c => aniosConDatos(c).concat(Object.keys(c.enCurso || {}).map(Number))))].sort((a, b) => a - b);
   if (!anios.length) anios.push(mesesPeriodo(state.periodo)[11].y);
   const wb = XLSX.utils.book_new();
   anios.forEach(y => XLSX.utils.book_append_sheet(wb, hojaAnio(state, y), `INFORME MENSUAL ${y}`));
@@ -1427,7 +1465,8 @@ function hojaAnio(state, anio) {
   const I0 = 6, G0 = 19;
   const FACT = 18, GAST = 31, CONS = 32, MEDIO = 33, EXTRA = 34;
   const L = colLetra;
-  const v = (c, tipo, m) => valor(c, tipo, anio, m);
+  // Incluye los meses en curso importados del Excel, para que no se pierdan al volver a importar.
+  const v = (c, tipo, m) => valorPeriodo(c, tipo, anio, m);
 
   const aoa = [];
   const h1 = []; h1[CTRL] = 'CONTROL'; h1[NOM] = 'CLIENTES '; h1[ALTA] = 'ESTADO'; h1[CUIT] = 'CUIT';
@@ -2033,6 +2072,7 @@ function renderHeader() {
   document.querySelectorAll('#sortFilters button').forEach(b => b.classList.toggle('active', b.dataset.s === ui.orden));
   $('#toggleEscalas').classList.toggle('active', ui.escalas);
   $('#toggleCarga').classList.toggle('active', ui.carga);
+  $('#togglePeriodo').classList.toggle('active', !!ui.verPeriodo);
 }
 
 // ---------- Barra de meses (igual a Gestión de Cobranzas) ----------
@@ -2106,6 +2146,7 @@ function render() {
   renderRecatAviso();
   renderAgregar();
   renderCarga();
+  renderPeriodo();
   renderEscalas();
   renderList();
 }
@@ -2185,6 +2226,75 @@ async function eliminarCliente(id, boton) {
   guardarEstado(state);
   render();
   toast('Cliente enviado a la papelera');
+}
+
+// ---------- Apartado PERIODO ----------
+// Facturación y gastos acumulados de los 12 meses del período de cada cliente activo, incluidos
+// los meses en curso que vinieron en el Excel (c.enCurso). Es solo de consulta.
+
+function renderPeriodo() {
+  const wrap = $('#periodoWrap');
+  if (!ui.verPeriodo) { wrap.innerHTML = ''; return; }
+  const meses = mesesPeriodo(state.periodo);
+  const lim = claveMes(mesACargar());
+  const enCursoDelPeriodo = meses.filter(d => claveMes(d) > lim);
+  const q = norm(ui.busqueda), qCuit = ui.busqueda.replace(/\D/g, '');
+  const filas = state.clients
+    .filter(c => !c.baja)
+    .filter(c => !q || norm(c.nombre).includes(q) || (qCuit && String(c.cuit || '').includes(qCuit)))
+    .sort((x, y) => rangoCategoria(y) - rangoCategoria(x) || norm(x.nombre).localeCompare(norm(y.nombre), 'es'))
+    .map(c => {
+      const r = { c, fact: 0, gast: 0, factCurso: 0, gastCurso: 0, cargados: 0, enCurso: 0 };
+      meses.forEach(d => {
+        const fi = valor(c, 'ingresos', d.y, d.m), fg = valor(c, 'gastos', d.y, d.m);
+        const ei = valorEnCurso(c, 'ingresos', d.y, d.m), eg = valorEnCurso(c, 'gastos', d.y, d.m);
+        if (fi != null || fg != null) r.cargados++;
+        else if (ei != null || eg != null) r.enCurso++;
+        r.fact += fi ?? ei ?? 0; r.gast += fg ?? eg ?? 0;
+        if (fi == null && ei != null) r.factCurso += ei;
+        if (fg == null && eg != null) r.gastCurso += eg;
+      });
+      return r;
+    });
+  const tot = filas.reduce((t, r) => ({ fact: t.fact + r.fact, gast: t.gast + r.gast }), { fact: 0, gast: 0 });
+  const conCurso = filas.some(r => r.enCurso);
+  const parte = v => (v ? `<span class="en-curso">incluye ${money(v)} en curso</span>` : '');
+  // Facturación máxima: tope de la categoría actual de cada cliente en la escala que se usa para el control.
+  const escala = escalaVigente(state);
+  const tope = c => (escala && c.categoria && escala.tops[c.categoria] != null ? escala.tops[c.categoria] : null);
+  const maxima = r => {
+    const t = tope(r.c);
+    if (t == null) return `<span class="sin-dato">${!escala ? 'Sin escala' : 'Sin categoría'}</span>`;
+    return `${money(t)}${r.fact > t ? '<span class="supera">supera el máximo</span>' : ''}`;
+  };
+  const cursoTexto = enCursoDelPeriodo.length
+    ? `Incluye los meses en curso (${enCursoDelPeriodo.map(d => mesNombre(d.m)).join(', ')}) que vienen en el Excel importado; esos meses no se usan en la carga mensual ni en el informe.`
+    : 'Todos los meses del período ya se cargan normalmente.';
+
+  wrap.innerHTML = `
+    <div class="panel">
+      <h3>Período ${etiquetaPeriodo(state.periodo)}</h3>
+      <p class="hint">Facturación y gastos acumulados de los 12 meses del período de cada cliente activo. ${cursoTexto} La facturación máxima es el tope de la categoría actual según la ${escala ? esc(escala.label) : 'escala (todavía no hay una completa cargada)'}.</p>
+      ${enCursoDelPeriodo.length && !conCurso ? '<p class="hint">Todavía no hay datos de meses en curso: se cargan al importar un Excel que los tenga.</p>' : ''}
+      <div class="months-box">
+        ${filas.length ? `
+        <table class="months periodo">
+          <thead><tr><th>Cliente</th><th class="num">Facturación acumulada</th><th class="num">Facturación máxima</th><th class="num">Gastos acumulados</th><th class="num">Meses con datos</th></tr></thead>
+          <tbody>
+            ${filas.map(r => `
+              <tr>
+                <th><span class="carga-nombre">${esc(r.c.nombre)}</span><span class="carga-cat">${r.c.categoria ? 'Cat. ' + r.c.categoria : 'Sin categoría'}</span></th>
+                <td class="num">${money(r.fact)}${parte(r.factCurso)}</td>
+                <td class="num">${maxima(r)}</td>
+                <td class="num">${money(r.gast)}${parte(r.gastCurso)}</td>
+                <td class="num">${r.cargados}${r.enCurso ? ` <span class="en-curso">+ ${r.enCurso} en curso</span>` : ''}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr><th>Total (${filas.length} ${filas.length === 1 ? 'cliente' : 'clientes'})</th><td class="num">${money(tot.fact)}</td><td></td><td class="num">${money(tot.gast)}</td><td></td></tr></tfoot>
+        </table>` : '<div class="empty-list">No hay clientes activos que coincidan con la búsqueda.</div>'}
+      </div>
+      <div class="actions"><button class="btn primary" data-act="ver-periodo">Listo</button></div>
+    </div>`;
 }
 
 // ---------- Panel de carga mensual ----------
@@ -2540,6 +2650,7 @@ function cardBody(c, a, escala) {
       <div class="form-grid">
         <div><label>CUIT</label><input data-f="cuit" value="${esc(fmtCuit(datosCliente(c).cuit))}" inputmode="numeric" placeholder="20-12345678-9"></div>
         <div><label>Categoría actual</label><select data-f="categoria">${catOpts}</select></div>
+        <div><label>Fecha de control</label><div class="fecha-control"><input type="date" data-f="control" value="${esc(datosCliente(c).control || '')}"><button type="button" class="link-btn" data-hoy-control>Hoy</button></div><small>Día en que se controló al cliente. Se exporta en la columna CONTROL del Excel.</small></div>
         <div class="full" data-accion>${accionHTML(c)}</div>
         <div class="full"><label>Medio de envío del informe</label><input data-f="medio" value="${esc(datosCliente(c).medio || '')}" placeholder="correo@ejemplo.com, otro@ejemplo.com  —  o WhatsApp"><small>Uno o más correos separados por coma. Si dice WhatsApp u otro medio, no se crea borrador de Gmail.</small></div>
       </div>
@@ -2597,6 +2708,12 @@ function conectarCard(c) {
     });
     if (f === 'cuit') el.addEventListener('blur', () => { el.value = fmtCuit(datosCliente(c).cuit); });
   });
+  // "Hoy" en la fecha de control: pone la fecha del día (queda pendiente de "Guardar cambios").
+  card.querySelectorAll('[data-hoy-control]').forEach(b => b.addEventListener('click', () => {
+    const input = card.querySelector('input[data-f="control"]');
+    input.value = hoyISO();
+    input.dispatchEvent(new Event('input'));
+  }));
   estadoGuardadoDatos(c, card);
 
   // Facturación y gastos: los cambios quedan en un borrador hasta tocar "Guardar cambios".
@@ -2664,12 +2781,12 @@ function conectarEdicionInforme(c, card) {
 }
 
 // ---------- Datos del cliente (CUIT, categoría, acción, baja) con "Guardar cambios" ----------
-const CAMPOS_DATOS = ['cuit', 'categoria', 'estado', 'medio', 'baja'];
+const CAMPOS_DATOS = ['cuit', 'categoria', 'estado', 'medio', 'baja', 'control'];
 const datosCliente = c => (ui.borradorDatos && ui.borradorDatos.id === c.id ? ui.borradorDatos : c);
 
 function cambiarDatoCliente(c, campo, v) {
   if (!ui.borradorDatos || ui.borradorDatos.id !== c.id) {
-    ui.borradorDatos = { id: c.id, cuit: c.cuit, categoria: c.categoria, estado: c.estado, medio: c.medio, baja: c.baja };
+    ui.borradorDatos = { id: c.id, cuit: c.cuit, categoria: c.categoria, estado: c.estado, medio: c.medio, baja: c.baja, control: c.control || '' };
   }
   ui.borradorDatos[campo] = v;
   // Si volvió a quedar igual que lo guardado, no hay nada pendiente.
@@ -3100,7 +3217,7 @@ async function importarArchivo(file) {
     // Valores de meses que todavía no corresponde cargar (posteriores al mes inmediato anterior).
     const sig = { y: resumen.limite.m === 11 ? resumen.limite.y + 1 : resumen.limite.y, m: (resumen.limite.m + 1) % 12 };
     const avisoFuturos = resumen.futuros
-      ? `Se ignoran ${resumen.futuros} ${resumen.futuros === 1 ? 'valor' : 'valores'} de facturación y gastos de ${mesTexto(sig)} en adelante: por ahora solo se carga hasta ${mesTexto(resumen.limite)}.`
+      ? `${resumen.futuros} ${resumen.futuros === 1 ? 'valor' : 'valores'} de facturación y gastos de ${mesTexto(sig)} en adelante se ${resumen.futuros === 1 ? 'guarda' : 'guardan'} como meses en curso: solo se ${resumen.futuros === 1 ? 've' : 'ven'} en el apartado Período. La carga mensual y el informe llegan hasta ${mesTexto(resumen.limite)}.`
       : '';
     if (state.clients.length && !confirm(`Se van a sumar los datos del archivo "${file.name}" (${resumen.clientes} clientes, año ${resumen.anios.join(' y ')}): ${resumen.actualizados} clientes ya cargados se actualizan y ${resumen.nuevos} se agregan.\n\nNo se borra ningún cliente. Las celdas vacías del archivo no borran lo que ya está cargado.${avisoFuturos ? '\n\n' + avisoFuturos : ''}\n\n¿Continuar?`)) return;
     state = nuevo;
@@ -3137,6 +3254,11 @@ document.addEventListener('click', e => {
     return;
   }
   switch (t.dataset.act) {
+    case 'ver-periodo':
+      ui.verPeriodo = !ui.verPeriodo;
+      renderHeader(); renderPeriodo();
+      if (ui.verPeriodo) $('#periodoWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      break;
     case 'importar': $('#file').click(); break;
     case 'exportar':
       if (!librerias()) return;
@@ -3249,7 +3371,7 @@ document.addEventListener('click', e => {
   }
 });
 
-$('#search').addEventListener('input', e => { ui.busqueda = e.target.value; renderList(); });
+$('#search').addEventListener('input', e => { ui.busqueda = e.target.value; renderList(); renderPeriodo(); });
 $('#file').addEventListener('change', e => { importarArchivo(e.target.files[0]); e.target.value = ''; });
 
 // Arrastrar y soltar el Excel en cualquier parte de la página.
@@ -3525,11 +3647,11 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
   });
 }
 </script>
-<script src="../sesion.js?v=20261015-0934"></script>
-<script src="../version.js?v=20261015-0934"></script>
-<script src="../resumen.js?v=20261015-0934"></script>
-<script src="../plantilla.js?v=20261015-0934"></script>
-<script src="../enter.js?v=20261015-0934"></script>
-<script src="../meses.js?v=20261015-0934"></script>
+<script src="../sesion.js?v=20261015-0947"></script>
+<script src="../version.js?v=20261015-0947"></script>
+<script src="../resumen.js?v=20261015-0947"></script>
+<script src="../plantilla.js?v=20261015-0947"></script>
+<script src="../enter.js?v=20261015-0947"></script>
+<script src="../meses.js?v=20261015-0947"></script>
 </body>
 </html>
