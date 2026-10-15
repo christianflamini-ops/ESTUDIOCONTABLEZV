@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>INFORME MENSUAL MONOTRIBUTO</title>
-<meta name="zv-version" content="20261005-1904">
+<meta name="zv-version" content="20261015-0934">
 <link rel="icon" type="image/png" href="../favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -756,10 +756,10 @@
   .top-row { order: -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
   .top-row .user-bar-top { position: static; margin-left: auto; order: 0; align-self: auto; }
 </style>
-<link rel="stylesheet" href="../comun.css?v=20261005-1904">
-<script src="../errores.js?v=20261005-1904"></script>
-<script src="../registro.js?v=20261005-1904"></script>
-<script src="../papelera.js?v=20261005-1904"></script>
+<link rel="stylesheet" href="../comun.css?v=20261015-0934">
+<script src="../errores.js?v=20261015-0934"></script>
+<script src="../registro.js?v=20261015-0934"></script>
+<script src="../papelera.js?v=20261015-0934"></script>
 </head>
 <body>
 
@@ -1176,6 +1176,35 @@ const EXTRA_COLS = ['NOMBRE EN INFORME', 'MOVIMIENTOS PATRIMONIALES', 'DEUDA'];
 function celdaNum(v) {
   return typeof v === 'number' ? v : parseNum(v);
 }
+// Columna CONTROL: fecha en que se controló al cliente. En el Excel puede venir como fecha
+// (número de serie) o como texto dd/mm/aaaa; se guarda como 'aaaa-mm-dd'.
+const SERIE_EXCEL_0 = Date.UTC(1899, 11, 30);
+function celdaFecha(v) {
+  if (v == null || v === '') return '';
+  const iso = (y, m, d) => (y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+    ? `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` : '';
+  if (typeof v === 'number') {
+    const f = new Date(SERIE_EXCEL_0 + Math.round(v) * 86400000);
+    return iso(f.getUTCFullYear(), f.getUTCMonth() + 1, f.getUTCDate());
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) return iso(m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]), Number(m[2]), Number(m[1]));
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  return m ? iso(Number(m[1]), Number(m[2]), Number(m[3])) : '';
+}
+const fechaASerieExcel = iso => {
+  const [y, m, d] = String(iso || '').split('-').map(Number);
+  return y ? (Date.UTC(y, m - 1, d) - SERIE_EXCEL_0) / 86400000 : null;
+};
+// Columna ESTADO: ALTA o BAJA. Devuelve true (baja), false (alta) o null (vacía o no reconocida).
+function celdaBaja(v) {
+  const s = norm(v);
+  if (!s) return null;
+  if (/\bBAJA\b/.test(s)) return true;
+  if (/\bALTA\b/.test(s) || s === 'ACTIVO' || s === 'ACTIVA') return false;
+  return null;
+}
 function claveCliente(c) {
   const cuit = String(c.cuit || '').replace(/\D/g, '');
   return cuit.length === 11 ? 'cuit:' + cuit : 'nom:' + norm(nombreLimpio(c.nombre));
@@ -1200,6 +1229,8 @@ function leerHojaClientes(ws) {
   const nomInfC = col(v => v === 'NOMBRE EN INFORME');
   const movC = col(v => v.startsWith('MOVIMIENTOS'));
   const deuC = col(v => v === 'DEUDA');
+  const ctrlC = col(v => v === 'CONTROL');
+  const altaC = col(v => v === 'ESTADO');
   // MEDIO puede tener el título en la primera o en la segunda fila de encabezados.
   const medC = [rows[h] || [], rows[h + 1] || []].map(fila => fila.map(norm).indexOf('MEDIO')).find(i => i >= 0) ?? -1;
   const txt = (r, c) => (c >= 0 && r[c] != null ? String(r[c]).trim() : '');
@@ -1211,12 +1242,17 @@ function leerHojaClientes(ws) {
     if (!nombre) continue;
     const cuitRaw = txt(r, cuitC);
     const categoria = txt(r, catC).toUpperCase();
+    // La columna ESTADO (ALTA/BAJA) manda; si está vacía, se usa la regla anterior
+    // (la palabra BAJA en el nombre o un guion en la categoría).
+    const bajaEstado = altaC >= 0 ? celdaBaja(r[altaC]) : null;
     clients.push(nuevoCliente({
       nombre,
       cuit: cuitRaw === '-' ? '' : cuitRaw.replace(/\D/g, ''),
       estado: txt(r, estC),
       categoria: CATS.includes(categoria) ? categoria : '',
-      baja: detectarBaja(nombre, categoria),
+      baja: bajaEstado ?? detectarBaja(nombre, categoria),
+      bajaExcel: bajaEstado, // solo para importarLibro; no se guarda
+      control: ctrlC >= 0 ? celdaFecha(r[ctrlC]) : '',
       ingresos: Array.from({ length: 12 }, (_, m) => celdaNum(r[ingC + m])),
       gastos: Array.from({ length: 12 }, (_, m) => celdaNum(r[gasC + m])),
       nombreInforme: txt(r, nomInfC),
@@ -1257,7 +1293,9 @@ function leerHojaEscala(ws) {
 // Cada hoja de clientes es un año (enero a diciembre). Si el nombre de la hoja tiene el año
 // (p. ej. "INFORME MENSUAL MONOTRIBUTO 2026") se usa ese; si no, se pregunta con pedirAnio().
 // Los años que no vienen en el archivo se conservan de los datos anteriores.
-function importarLibro(arrayBuffer, prev, fileName, pedirAnio) {
+// Solo se carga hasta el mes inmediato anterior (en octubre, hasta septiembre inclusive): los
+// valores del archivo de meses posteriores a `limite` se descartan y se informan en el resumen.
+function importarLibro(arrayBuffer, prev, fileName, pedirAnio, limite = mesACargar()) {
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
   const hojaEscala = wb.SheetNames.find(n => norm(n).includes('ESCALA'));
   let hojas = wb.SheetNames.filter(n => n !== hojaEscala && norm(n).includes('INFORME'));
@@ -1287,6 +1325,16 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio) {
     }
   }
   const clients = [...porClave.values()];
+  let futuros = 0;
+  for (const c of clients) {
+    for (const [anio, d] of Object.entries(c.datos || {})) {
+      for (const tipo of ['ingresos', 'gastos']) {
+        (d[tipo] || []).forEach((v, m) => {
+          if (v != null && claveMes({ y: Number(anio), m }) > claveMes(limite)) { d[tipo][m] = null; futuros++; }
+        });
+      }
+    }
+  }
   const escalas = hojaEscala ? leerHojaEscala(wb.Sheets[hojaEscala]) : [];
 
   // Se suma a la lista actual: los clientes del archivo que ya están (mismo CUIT o mismo nombre) se
@@ -1304,6 +1352,8 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio) {
   const vacios = () => Array(12).fill(null);
   let actualizados = 0, nuevos = 0;
   for (const c of clients) {
+    const bajaExcel = c.bajaExcel;
+    delete c.bajaExcel;
     const k = claveCliente(c);
     const pos = (k.startsWith('cuit:') && porCuit.has(k)) ? porCuit.get(k) : porNombre.get(claveNombre(c));
     if (pos === undefined) {
@@ -1313,10 +1363,11 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio) {
       continue;
     }
     const p = resultado[pos];
-    for (const campo of ['cuit', 'estado', 'categoria', 'medio', 'nombreInforme', 'movimientos', 'deuda']) {
+    for (const campo of ['cuit', 'estado', 'categoria', 'medio', 'nombreInforme', 'movimientos', 'deuda', 'control']) {
       if (c[campo]) p[campo] = c[campo];
     }
-    if (c.baja) p.baja = true;
+    if (bajaExcel === true || bajaExcel === false) p.baja = bajaExcel; // columna ESTADO (ALTA/BAJA)
+    else if (c.baja) p.baja = true;
     else if (c.categoria) p.baja = false;
     for (const [anio, d] of Object.entries(c.datos || {})) {
       const ant = p.datos[anio] || { ingresos: vacios(), gastos: vacios() };
@@ -1346,7 +1397,7 @@ function importarLibro(arrayBuffer, prev, fileName, pedirAnio) {
       escalaSel: escalas.length ? escalaSel : prev.escalaSel,
       fuente: { archivo: fileName, fecha: new Date().toISOString() },
     },
-    resumen: { clientes: clients.length, actualizados, nuevos, total: resultado.length, escalas: escalas.length, anios, hojaEscala },
+    resumen: { clientes: clients.length, actualizados, nuevos, total: resultado.length, escalas: escalas.length, anios, hojaEscala, futuros, limite },
   };
 }
 
@@ -1370,13 +1421,17 @@ function exportarLibro(state, nombreArchivo = 'INFORME MENSUAL MONOTRIBUTO.xlsx'
 
 function hojaAnio(state, anio) {
   const MES_UP = MESES.map(m => m.toUpperCase());
-  const I0 = 4, G0 = 17; // E y R
-  const FACT = 16, GAST = 29, CONS = 30, MEDIO = 31, EXTRA = 32;
+  // A CONTROL · B CLIENTES · C ESTADO · D CUIT · E FACTURACION (acción) · F CATEGORIA ·
+  // G–R facturación por mes · S acumulada · T–AE gastos por mes · AF acumulados · AG consistencia · AH medio · AI… notas
+  const CTRL = 0, NOM = 1, ALTA = 2, CUIT = 3, ACC = 4, CAT = 5;
+  const I0 = 6, G0 = 19;
+  const FACT = 18, GAST = 31, CONS = 32, MEDIO = 33, EXTRA = 34;
   const L = colLetra;
   const v = (c, tipo, m) => valor(c, tipo, anio, m);
 
   const aoa = [];
-  const h1 = []; h1[0] = 'CLIENTES '; h1[1] = 'CUIT'; h1[2] = 'FACTURACION'; h1[3] = 'CATEGORIA';
+  const h1 = []; h1[CTRL] = 'CONTROL'; h1[NOM] = 'CLIENTES '; h1[ALTA] = 'ESTADO'; h1[CUIT] = 'CUIT';
+  h1[ACC] = 'FACTURACION'; h1[CAT] = 'CATEGORIA';
   h1[I0] = 'FACTURACIÓN'; h1[FACT] = 'FACTURACION ACUMULADA'; h1[G0] = 'GASTOS';
   h1[GAST] = 'GASTOS ACUMULADOS'; h1[CONS] = 'CONSISTENCIA FISCAL';
   EXTRA_COLS.forEach((t, k) => { h1[EXTRA + k] = t; });
@@ -1386,10 +1441,12 @@ function hojaAnio(state, anio) {
 
   state.clients.forEach(c => {
     const r = [];
-    r[0] = c.nombre;
-    r[1] = c.cuit ? Number(c.cuit) : '-';
-    r[2] = c.estado || null;
-    r[3] = c.categoria || '-';
+    r[CTRL] = fechaASerieExcel(c.control);
+    r[NOM] = c.nombre;
+    r[ALTA] = c.baja ? 'BAJA' : 'ALTA';
+    r[CUIT] = c.cuit ? Number(c.cuit) : '-';
+    r[ACC] = c.estado || null;
+    r[CAT] = c.categoria || '-';
     for (let m = 0; m < 12; m++) { r[I0 + m] = v(c, 'ingresos', m); r[G0 + m] = v(c, 'gastos', m); }
     r[EXTRA] = c.nombreInforme || null;
     r[EXTRA + 1] = c.movimientos || null;
@@ -1401,6 +1458,8 @@ function hojaAnio(state, anio) {
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   state.clients.forEach((c, i) => {
     const n = i + 3;
+    const ctrl = ws[L(CTRL) + n];
+    if (ctrl && ctrl.t === 'n') ctrl.z = 'dd/mm/yyyy';
     const fi = sum(Array.from({ length: 12 }, (_, m) => v(c, 'ingresos', m)));
     const fg = sum(Array.from({ length: 12 }, (_, m) => v(c, 'gastos', m)));
     ws[L(FACT) + n] = { t: 'n', v: fi, f: `+SUM(${L(I0)}${n}:${L(I0 + 11)}${n})`, z: '#,##0.00' };
@@ -1410,8 +1469,8 @@ function hojaAnio(state, anio) {
       for (const cc of [I0 + m, G0 + m]) { const cell = ws[L(cc) + n]; if (cell) cell.z = '#,##0.00'; }
     }
   });
-  ws['!merges'] = [XLSX.utils.decode_range('E1:P1'), XLSX.utils.decode_range('R1:AC1')];
-  ws['!cols'] = [{ wch: 44 }, { wch: 13 }, { wch: 26 }, { wch: 10 }]
+  ws['!merges'] = [XLSX.utils.decode_range(`${L(I0)}1:${L(I0 + 11)}1`), XLSX.utils.decode_range(`${L(G0)}1:${L(G0 + 11)}1`)];
+  ws['!cols'] = [{ wch: 12 }, { wch: 44 }, { wch: 9 }, { wch: 13 }, { wch: 26 }, { wch: 10 }]
     .concat(Array(12).fill({ wch: 13 }), [{ wch: 16 }], Array(12).fill({ wch: 13 }), [{ wch: 16 }, { wch: 16 }, { wch: 45 }, { wch: 30 }, { wch: 40 }, { wch: 40 }]);
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: EXTRA + EXTRA_COLS.length - 1 } });
   return ws;
@@ -1435,10 +1494,12 @@ function descargarPlantillaInforme() {
         'Guardá el archivo como Excel (.xlsx) y, en la herramienta, tocá «Importar Excel».'
       ],
       columnas: [
-        ['CLIENTES', true, 'Nombre del cliente. Si el cliente está dado de baja, agregá la palabra BAJA al nombre.', 'PÉREZ JUAN'],
+        ['CONTROL', false, 'Fecha en que se controló al cliente (día/mes/año).', '15/10/2026'],
+        ['CLIENTES', true, 'Nombre del cliente.', 'PÉREZ JUAN'],
+        ['ESTADO', false, 'ALTA si el cliente está activo o BAJA si está dado de baja. Si queda vacío, el cliente se da de baja solo si el nombre dice BAJA o la categoría es un guion (-).', 'ALTA'],
         ['CUIT', false, 'CUIT del cliente (11 números). Se usa para reconocer al cliente en futuras importaciones.', 20123456789],
-        ['FACTURACION (columna C)', false, 'Acción o estado del cliente para el informe.', 'FACTURAR (MENSUAL)'],
-        ['CATEGORIA', false, 'Categoría actual de monotributo: una letra de la A a la K. Un guion (-) marca al cliente como dado de baja.', 'C'],
+        ['FACTURACION (columna E)', false, 'Acción a seguir con el cliente para el informe.', 'FACTURAR (MENSUAL)'],
+        ['CATEGORIA', false, 'Categoría actual de monotributo: una letra de la A a la K.', 'C'],
         ['FACTURACIÓN: ENERO a DICIEMBRE', false, 'Lo facturado en cada mes del año, solo el número. Los meses sin datos quedan vacíos.', 1250000],
         ['GASTOS: ENERO a DICIEMBRE', false, 'Los gastos de cada mes del año, solo el número.', 420000],
         ['MEDIO', false, 'Correo del cliente (varios separados por coma) o WhatsApp. Si dice WhatsApp no se crea borrador de Gmail.', 'cliente@gmail.com'],
@@ -1874,7 +1935,11 @@ const cargaAtrasada = (hoy = new Date()) => hoy.getDate() > DIA_CARGA;
 const mesCargado = (c, d) => valor(c, 'ingresos', d.y, d.m) != null && valor(c, 'gastos', d.y, d.m) != null;
 
 // Mes de datos elegido en la barra de meses {y, m} (por defecto, el que corresponde cargar).
-const mesSel = () => (ui.mes ??= mesACargar());
+// Nunca posterior al mes inmediato anterior: en octubre se carga, como máximo, septiembre.
+const mesSel = () => {
+  if (!ui.mes || claveMes(ui.mes) > claveMes(mesACargar())) ui.mes = mesACargar();
+  return ui.mes;
+};
 const mesCorto = m => MESES[m].slice(0, 3).toUpperCase();
 const mesNombre = m => MESES[m].toLowerCase();
 const mesTexto = d => `${mesNombre(d.m)} ${d.y}`;
@@ -3032,7 +3097,12 @@ async function importarArchivo(file) {
       return y > 2000 && y < 2100 ? y : null;
     };
     const { state: nuevo, resumen } = importarLibro(await file.arrayBuffer(), state, file.name, pedirAnio);
-    if (state.clients.length && !confirm(`Se van a sumar los datos del archivo "${file.name}" (${resumen.clientes} clientes, año ${resumen.anios.join(' y ')}): ${resumen.actualizados} clientes ya cargados se actualizan y ${resumen.nuevos} se agregan.\n\nNo se borra ningún cliente. Las celdas vacías del archivo no borran lo que ya está cargado.\n\n¿Continuar?`)) return;
+    // Valores de meses que todavía no corresponde cargar (posteriores al mes inmediato anterior).
+    const sig = { y: resumen.limite.m === 11 ? resumen.limite.y + 1 : resumen.limite.y, m: (resumen.limite.m + 1) % 12 };
+    const avisoFuturos = resumen.futuros
+      ? `Se ignoran ${resumen.futuros} ${resumen.futuros === 1 ? 'valor' : 'valores'} de facturación y gastos de ${mesTexto(sig)} en adelante: por ahora solo se carga hasta ${mesTexto(resumen.limite)}.`
+      : '';
+    if (state.clients.length && !confirm(`Se van a sumar los datos del archivo "${file.name}" (${resumen.clientes} clientes, año ${resumen.anios.join(' y ')}): ${resumen.actualizados} clientes ya cargados se actualizan y ${resumen.nuevos} se agregan.\n\nNo se borra ningún cliente. Las celdas vacías del archivo no borran lo que ya está cargado.${avisoFuturos ? '\n\n' + avisoFuturos : ''}\n\n¿Continuar?`)) return;
     state = nuevo;
     guardarEstado(state);
     verificarRecategorizaciones();
@@ -3041,7 +3111,7 @@ async function importarArchivo(file) {
     ui.anioBar = null;
     render();
     registrar('Importó un Excel', '', `${file.name}: ${resumen.actualizados} clientes actualizados${resumen.nuevos ? `, ${resumen.nuevos} nuevos` : ''}${resumen.escalas ? ` y ${resumen.escalas} escalas` : ''}`);
-    toast(`Excel importado: ${resumen.actualizados} clientes actualizados${resumen.nuevos ? `, ${resumen.nuevos} nuevos` : ''}${resumen.escalas ? ` y ${resumen.escalas} escalas` : ''}`);
+    toast(`Excel importado: ${resumen.actualizados} clientes actualizados${resumen.nuevos ? `, ${resumen.nuevos} nuevos` : ''}${resumen.escalas ? ` y ${resumen.escalas} escalas` : ''}${resumen.futuros ? `. ${avisoFuturos}` : ''}`);
   } catch (e) {
     console.error(e);
     toast('No se pudo leer el Excel: ' + e.message, true);
@@ -3455,11 +3525,11 @@ if (typeof firebase !== "undefined" && firebase.apps.length && typeof firebase.a
   });
 }
 </script>
-<script src="../sesion.js?v=20261005-1904"></script>
-<script src="../version.js?v=20261005-1904"></script>
-<script src="../resumen.js?v=20261005-1904"></script>
-<script src="../plantilla.js?v=20261005-1904"></script>
-<script src="../enter.js?v=20261005-1904"></script>
-<script src="../meses.js?v=20261005-1904"></script>
+<script src="../sesion.js?v=20261015-0934"></script>
+<script src="../version.js?v=20261015-0934"></script>
+<script src="../resumen.js?v=20261015-0934"></script>
+<script src="../plantilla.js?v=20261015-0934"></script>
+<script src="../enter.js?v=20261015-0934"></script>
+<script src="../meses.js?v=20261015-0934"></script>
 </body>
 </html>
